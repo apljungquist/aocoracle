@@ -27,7 +27,7 @@ fn part_2(filename: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use super::*;
 
     #[test]
     fn part_1_works_on_example() {
