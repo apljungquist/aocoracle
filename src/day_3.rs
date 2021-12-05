@@ -1,5 +1,6 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::hash::Hash;
 
 fn _read_input(name: &str) -> String {
     fs::read_to_string(format!("day/3/{}", name)).unwrap()
@@ -37,22 +38,32 @@ fn _transposed(rows: Vec<Vec<bool>>) -> Vec<Vec<bool>> {
     result
 }
 
-fn _gamma(cols: &Vec<Vec<bool>>) -> u32 {
-    cols.iter()
-        .map(|v| v.len() / 2 < v.iter().filter(|b| **b).count())
+fn _mode<T: Eq + Hash>(values: impl Iterator<Item = T>) -> Option<T> {
+    let mut counts = HashMap::new();
+    for v in values {
+        let mut count = counts.entry(v).or_insert(0);
+        *count += 1;
+    }
+    counts
+        .into_iter()
+        .max_by_key(|&(_, count)| count)
+        .map(|(k, _)| k)
+}
+
+fn _from_bits(bits: Vec<bool>) -> u32 {
+    bits.into_iter()
         .rev()
         .enumerate()
         .map(|(i, b)| if b { u32::pow(2, i as u32) } else { 0 })
         .sum()
 }
 
+fn _gamma(cols: &Vec<Vec<bool>>) -> u32 {
+    _from_bits(cols.iter().map(|vs| *_mode(vs.iter()).unwrap()).collect())
+}
+
 fn _epsilon(cols: &Vec<Vec<bool>>) -> u32 {
-    cols.iter()
-        .map(|v| v.len() / 2 > v.iter().filter(|b| **b).count())
-        .rev()
-        .enumerate()
-        .map(|(i, b)| if b { u32::pow(2, i as u32) } else { 0 })
-        .sum()
+    _from_bits(cols.iter().map(|vs| !*_mode(vs.iter()).unwrap()).collect())
 }
 
 fn _carbon(cols: &Vec<Vec<bool>>) -> u32 {
