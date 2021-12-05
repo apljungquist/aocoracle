@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs;
 use std::hash::Hash;
@@ -48,19 +49,12 @@ where
     F2: Fn(&T) -> V,
     F3: Fn(Vec<V>) -> W,
 {
-    let mut grouped: HashMap<U, Vec<V>> = HashMap::new();
-    for v in values {
-        grouped
-            .entry(key_func(&v))
-            .or_insert(Vec::new())
-            .push(value_func(&v));
-    }
-
-    let mut result = HashMap::with_capacity(grouped.len());
-    for (k, vs) in grouped.drain() {
-        result.insert(k, reduce_func(vs));
-    }
-    result
+    values
+        .map(|v| (key_func(&v), value_func(&v)))
+        .into_group_map()
+        .drain()
+        .map(|(k, vs)| (k, reduce_func(vs)))
+        .collect()
 }
 
 fn part_1(filename: &str) -> u32 {
