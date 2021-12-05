@@ -1,9 +1,12 @@
+use std::collections::HashMap;
 use std::fs;
+use std::hash::Hash;
 
 fn _read_input(name: &str) -> String {
     fs::read_to_string(format!("day/2/{}", name)).unwrap()
 }
 
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 enum Direction {
     FORWARD,
     DOWN,
@@ -15,14 +18,13 @@ struct Command {
     magnitude: u32,
 }
 
-fn _commands(text: &str) -> Vec<Command> {
-    let mut result = Vec::new();
-    for line in text.lines() {
+impl Command {
+    fn parse(line: &str) -> Command {
         let mut parts = line.split_whitespace();
         let direction = parts.next().unwrap();
         let distance = parts.next().unwrap();
 
-        result.push(Command {
+        Command {
             direction: match direction {
                 "forward" => Some(Direction::FORWARD),
                 "down" => Some(Direction::DOWN),
@@ -31,29 +33,53 @@ fn _commands(text: &str) -> Vec<Command> {
             }
             .unwrap(),
             magnitude: distance.parse::<u32>().unwrap(),
-        });
+        }
+    }
+}
+
+fn _map_reduce<T, U: Eq + Hash, V, W, F1, F2, F3>(
+    values: impl Iterator<Item = T>,
+    key_func: F1,
+    value_func: F2,
+    reduce_func: F3,
+) -> HashMap<U, W>
+where
+    F1: Fn(&T) -> U,
+    F2: Fn(&T) -> V,
+    F3: Fn(Vec<V>) -> W,
+{
+    let mut grouped: HashMap<U, Vec<V>> = HashMap::new();
+    for v in values {
+        grouped
+            .entry(key_func(&v))
+            .or_insert(Vec::new())
+            .push(value_func(&v));
+    }
+
+    let mut result = HashMap::with_capacity(grouped.len());
+    for (k, vs) in grouped.drain() {
+        result.insert(k, reduce_func(vs));
     }
     result
 }
 
 fn part_1(filename: &str) -> u32 {
-    let mut horizontal = 0;
-    let mut vertital = 0;
-    for command in _commands(&_read_input(filename)) {
-        match command.direction {
-            Direction::FORWARD => horizontal += command.magnitude,
-            Direction::DOWN => vertital += command.magnitude,
-            Direction::UP => vertital -= command.magnitude,
-        }
-    }
-    horizontal * vertital
+    let mut counts: HashMap<Direction, u32> = _map_reduce(
+        _read_input(filename).lines().map(Command::parse),
+        |v| v.direction,
+        |v| v.magnitude,
+        |vs| vs.iter().sum(),
+    );
+    counts.remove(&Direction::FORWARD).unwrap_or(0)
+        * (counts.remove(&Direction::DOWN).unwrap_or(0)
+            - counts.remove(&Direction::UP).unwrap_or(0))
 }
 
 fn part_2(filename: &str) -> u32 {
     let mut aim = 0;
     let mut horizontal = 0;
     let mut vertital = 0;
-    for command in _commands(&_read_input(filename)) {
+    for command in _read_input(filename).lines().map(Command::parse) {
         match command.direction {
             Direction::FORWARD => {
                 horizontal += command.magnitude;
