@@ -38,16 +38,32 @@ fn _transposed(rows: Vec<Vec<bool>>) -> Vec<Vec<bool>> {
     result
 }
 
-fn _mode<T: Eq + Hash>(values: impl Iterator<Item = T>) -> Option<T> {
+#[derive(Debug)]
+enum AggregationError {
+    TooFew,
+    TooMany,
+}
+
+fn _mode<T: Copy + Eq + Hash>(values: impl Iterator<Item = T>) -> Result<T, AggregationError> {
     let mut counts = HashMap::new();
     for v in values {
-        let mut count = counts.entry(v).or_insert(0);
+        let count = counts.entry(v).or_insert(0);
+        // This bothers me; surely I should not be able to increment an immutable value...
         *count += 1;
     }
-    counts
-        .into_iter()
-        .max_by_key(|&(_, count)| count)
-        .map(|(k, _)| k)
+    let best = counts.iter().max_by_key(|&(_, count)| count);
+    let best = match best {
+        Some(v) => v,
+        None => return Err(AggregationError::TooFew),
+    };
+
+    for (k, v) in counts.iter() {
+        if best.0 != k && best.1 == v {
+            return Err(AggregationError::TooMany);
+        }
+    }
+
+    Ok(*best.0)
 }
 
 fn _from_bits(bits: Vec<bool>) -> u32 {
@@ -55,6 +71,10 @@ fn _from_bits(bits: Vec<bool>) -> u32 {
         .rev()
         .enumerate()
         .map(|(i, b)| if b { u32::pow(2, i as u32) } else { 0 })
+        .map(|x| {
+            println!("{}", x);
+            x
+        })
         .sum()
 }
 
@@ -66,15 +86,16 @@ fn _epsilon(cols: &Vec<Vec<bool>>) -> u32 {
     _from_bits(cols.iter().map(|vs| !*_mode(vs.iter()).unwrap()).collect())
 }
 
-fn _carbon(cols: &Vec<Vec<bool>>) -> u32 {
-    let mut rows: HashSet<usize> = (0..cols.len()).collect();
+fn _oxygen(cols: &Vec<Vec<bool>>) -> u32 {
+    let mut rows: HashSet<usize> = (0..cols.iter().map(|c| c.len()).max().unwrap()).collect();
     for col in cols {
-        let target: bool = rows.len() / 2
-            < col
-                .iter()
+        let target = *_mode(
+            col.iter()
                 .enumerate()
                 .filter(|(i, _)| rows.contains(i))
-                .count();
+                .map(|(_, v)| v),
+        )
+        .unwrap_or(&true);
         for (i, actual) in col.iter().enumerate() {
             if *actual != target {
                 rows.remove(&i);
@@ -86,12 +107,52 @@ fn _carbon(cols: &Vec<Vec<bool>>) -> u32 {
     }
     assert_eq!(rows.len(), 1);
     let row = rows.drain().next().unwrap();
-    cols.iter()
-        .map(|v| v[row])
-        .rev()
-        .enumerate()
-        .map(|(i, b)| if b { u32::pow(2, i as u32) } else { 0 })
-        .sum()
+    _from_bits(cols.iter().map(|v| v[row]).collect())
+}
+
+fn _carbon(cols: &Vec<Vec<bool>>) -> u32 {
+    let mut rows: HashSet<usize> = (0..cols.iter().map(|c| c.len()).max().unwrap()).collect();
+    println!("rows: {:?}", rows);
+    for col in cols {
+        // Since the value is boolean the least common value is whatever value is not the most common.
+        // And since we negate the expression we do not need to negate the default value.
+        let target = !*_mode(
+            col.iter()
+                .enumerate()
+                .filter(|(i, _)| rows.contains(i))
+                .map(|(_, v)| v)
+                .map(|x| {
+                    println!("{:?}", x);
+                    x
+                }),
+        )
+        .unwrap_or(&true);
+        println!("target: {}", target);
+        for (i, actual) in col.iter().enumerate() {
+            if *actual != target {
+                println!("removing {} {}", i, actual);
+                rows.remove(&i);
+            } else {
+                println!("keeping {} {}", i, actual);
+            }
+        }
+        println!("{:?}", rows);
+        if rows.len() == 1 {
+            break;
+        }
+    }
+    assert_eq!(rows.len(), 1);
+    let row = rows.drain().next().unwrap();
+    _from_bits(cols.iter().map(|v| v[row]).collect())
+}
+
+fn _oxygen_from_file(filename: &str) -> u32 {
+    let cols = _transposed(_rows(&_read_input(filename)));
+    _oxygen(&cols)
+}
+fn _carbon_from_file(filename: &str) -> u32 {
+    let cols = _transposed(_rows(&_read_input(filename)));
+    _carbon(&cols)
 }
 
 fn part_1(filename: &str) -> u32 {
@@ -101,7 +162,7 @@ fn part_1(filename: &str) -> u32 {
 
 fn part_2(filename: &str) -> u32 {
     let cols = _transposed(_rows(&_read_input(filename)));
-    _carbon(&cols)
+    _oxygen(&cols) * _carbon(&cols)
 }
 
 #[cfg(test)]
@@ -116,6 +177,15 @@ mod tests {
     #[test]
     fn part_1_works_on_input() {
         assert_eq!(part_1("input.txt"), 2954600);
+    }
+
+    #[test]
+    fn oxygen_works_on_example() {
+        assert_eq!(_oxygen_from_file("example.txt"), 23);
+    }
+    #[test]
+    fn carbon_works_on_example() {
+        assert_eq!(_carbon_from_file("example.txt"), 10);
     }
 
     #[test]
