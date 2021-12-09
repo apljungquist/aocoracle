@@ -72,7 +72,7 @@ fn _score(board: &HashMap<(bool, usize), HashSet<u32>>) -> u32 {
 fn part_1(filename: &str) -> u32 {
     let draws = _read_draws(filename);
     let mut boards = _read_boards(filename);
-    for (i, draw) in draws.into_iter().enumerate() {
+    for draw in draws.into_iter() {
         for board in boards.iter_mut() {
             _cross(board, draw);
             if _bingo(board) {
@@ -82,8 +82,27 @@ fn part_1(filename: &str) -> u32 {
     }
     panic!("Oups");
 }
+
 fn part_2(filename: &str) -> u32 {
-    0
+    let mut draws = _read_draws(filename).into_iter();
+    let mut boards = _read_boards(filename);
+    while boards.len() > 1 {
+        let draw: u32 = draws.next().unwrap();
+        for board in boards.iter_mut() {
+            _cross(board, draw);
+        }
+        boards.retain(|b| !_bingo(b));
+    }
+    assert_eq!(boards.len(), 1);
+    for draw in draws {
+        for board in boards.iter_mut() {
+            _cross(board, draw);
+            if _bingo(board) {
+                return _score(board) * draw;
+            }
+        }
+    }
+    panic!("Oups");
 }
 
 #[cfg(test)]
