@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.10.0"
+regex = "1.4.5"
 
 [lib]
 name = "aoc"
