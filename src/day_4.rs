@@ -1,10 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::hash::Hash;
-
-use itertools::Itertools;
-
-struct Input {}
 
 fn _read_input(name: &str) -> String {
     fs::read_to_string(format!("day/4/{}", name)).unwrap()
@@ -62,7 +57,7 @@ fn _bingo(board: &HashMap<(bool, usize), HashSet<u32>>) -> bool {
 fn _score(board: &HashMap<(bool, usize), HashSet<u32>>) -> u32 {
     board
         .into_iter()
-        .filter_map(|((is_row, col_num), row)| match is_row {
+        .filter_map(|((is_row, _), row)| match is_row {
             false => Some(row.iter().sum::<u32>()),
             true => None,
         })

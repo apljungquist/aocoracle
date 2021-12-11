@@ -1,9 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::hash::Hash;
 use std::iter::zip;
 
-use itertools::Itertools;
 use regex;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -104,9 +103,17 @@ fn _print_grid(counts: &HashMap<Point, u32>) -> () {
     println!("r:{:?}, c:{:?}", max_row, max_col);
     for row_num in 0..=max_row {
         for col_num in 0..=max_col {
-            // print!("{}", counts.get(&Point{x:col_num, y:row_num}).unwrap_or(&0));
+            print!(
+                "{}",
+                counts
+                    .get(&Point {
+                        x: col_num,
+                        y: row_num
+                    })
+                    .unwrap_or(&0)
+            );
         }
-        // println!("");
+        println!("");
     }
 }
 
@@ -124,7 +131,6 @@ fn _risk(arrows: Vec<Arrow>, include_diagonal: bool) -> u32 {
             })
             .collect(),
     );
-    _print_grid(&counts);
     counts.into_iter().filter(|(_, c)| 2 <= *c).count() as u32
 }
 
