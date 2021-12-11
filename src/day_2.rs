@@ -9,9 +9,9 @@ fn _read_input(name: &str) -> String {
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 enum Direction {
-    FORWARD,
-    DOWN,
-    UP,
+    Forward,
+    Down,
+    Up,
 }
 
 struct Command {
@@ -27,9 +27,9 @@ impl Command {
 
         Command {
             direction: match direction {
-                "forward" => Some(Direction::FORWARD),
-                "down" => Some(Direction::DOWN),
-                "up" => Some(Direction::UP),
+                "forward" => Some(Direction::Forward),
+                "down" => Some(Direction::Down),
+                "up" => Some(Direction::Up),
                 _ => None,
             }
             .unwrap(),
@@ -57,33 +57,33 @@ where
         .collect()
 }
 
-fn part_1(filename: &str) -> u32 {
+pub fn part_1(filename: &str) -> u32 {
     let mut counts: HashMap<Direction, u32> = _map_reduce(
         _read_input(filename).lines().map(Command::parse),
         |v| v.direction,
         |v| v.magnitude,
         |vs| vs.iter().sum(),
     );
-    counts.remove(&Direction::FORWARD).unwrap_or(0)
-        * (counts.remove(&Direction::DOWN).unwrap_or(0)
-            - counts.remove(&Direction::UP).unwrap_or(0))
+    counts.remove(&Direction::Forward).unwrap_or(0)
+        * (counts.remove(&Direction::Down).unwrap_or(0)
+            - counts.remove(&Direction::Up).unwrap_or(0))
 }
 
-fn part_2(filename: &str) -> u32 {
+pub fn part_2(filename: &str) -> u32 {
     let mut aim = 0;
     let mut horizontal = 0;
-    let mut vertital = 0;
+    let mut vertical = 0;
     for command in _read_input(filename).lines().map(Command::parse) {
         match command.direction {
-            Direction::FORWARD => {
+            Direction::Forward => {
                 horizontal += command.magnitude;
-                vertital += aim * command.magnitude
+                vertical += aim * command.magnitude
             }
-            Direction::DOWN => aim += command.magnitude,
-            Direction::UP => aim -= command.magnitude,
+            Direction::Down => aim += command.magnitude,
+            Direction::Up => aim -= command.magnitude,
         }
     }
-    horizontal * vertital
+    horizontal * vertical
 }
 
 #[cfg(test)]

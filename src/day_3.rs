@@ -78,15 +78,15 @@ fn _from_bits(bits: Vec<bool>) -> u32 {
         .sum()
 }
 
-fn _gamma(cols: &Vec<Vec<bool>>) -> u32 {
+fn _gamma(cols: &[Vec<bool>]) -> u32 {
     _from_bits(cols.iter().map(|vs| *_mode(vs.iter()).unwrap()).collect())
 }
 
-fn _epsilon(cols: &Vec<Vec<bool>>) -> u32 {
+fn _epsilon(cols: &[Vec<bool>]) -> u32 {
     _from_bits(cols.iter().map(|vs| !*_mode(vs.iter()).unwrap()).collect())
 }
 
-fn _oxygen(cols: &Vec<Vec<bool>>) -> u32 {
+fn _oxygen(cols: &[Vec<bool>]) -> u32 {
     let mut rows: HashSet<usize> = (0..cols.iter().map(|c| c.len()).max().unwrap()).collect();
     for col in cols {
         let target = *_mode(
@@ -110,7 +110,7 @@ fn _oxygen(cols: &Vec<Vec<bool>>) -> u32 {
     _from_bits(cols.iter().map(|v| v[row]).collect())
 }
 
-fn _carbon(cols: &Vec<Vec<bool>>) -> u32 {
+fn _carbon(cols: &[Vec<bool>]) -> u32 {
     let mut rows: HashSet<usize> = (0..cols.iter().map(|c| c.len()).max().unwrap()).collect();
     println!("rows: {:?}", rows);
     for col in cols {
@@ -155,12 +155,12 @@ fn _carbon_from_file(filename: &str) -> u32 {
     _carbon(&cols)
 }
 
-fn part_1(filename: &str) -> u32 {
+pub fn part_1(filename: &str) -> u32 {
     let cols = _transposed(_rows(&_read_input(filename)));
     _gamma(&cols) * _epsilon(&cols)
 }
 
-fn part_2(filename: &str) -> u32 {
+pub fn part_2(filename: &str) -> u32 {
     let cols = _transposed(_rows(&_read_input(filename)));
     _oxygen(&cols) * _carbon(&cols)
 }

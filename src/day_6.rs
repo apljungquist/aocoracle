@@ -7,9 +7,9 @@ fn _read_input(name: &str) -> String {
 
 fn _census(line: &str) -> HashMap<u32, u64> {
     let mut result = HashMap::new();
-    for countdown in line.trim_end().split(",").map(|s| {
+    for countdown in line.trim_end().split(',').map(|s| {
         s.parse::<u32>()
-            .expect(&format!("Expected an int but got '{}'", s))
+            .unwrap_or_else(|_| panic!("Expected an int but got '{}'", s))
     }) {
         *(result.entry(countdown).or_insert(0)) += 1;
     }
@@ -32,7 +32,7 @@ fn _next_census(prev: &HashMap<u32, u64>) -> HashMap<u32, u64> {
     result
 }
 
-fn _nth_cencus(initial: HashMap<u32, u64>, n: u32) -> HashMap<u32, u64> {
+fn _nth_census(initial: HashMap<u32, u64>, n: u32) -> HashMap<u32, u64> {
     let mut census = initial;
     for _ in 0..n {
         census = _next_census(&census);
@@ -40,14 +40,14 @@ fn _nth_cencus(initial: HashMap<u32, u64>, n: u32) -> HashMap<u32, u64> {
     census
 }
 
-fn part_1(filename: &str) -> u64 {
+pub fn part_1(filename: &str) -> u64 {
     let initial = _census(&_read_input(filename));
-    _nth_cencus(initial, 80).values().sum()
+    _nth_census(initial, 80).values().sum()
 }
 
-fn part_2(filename: &str) -> u64 {
+pub fn part_2(filename: &str) -> u64 {
     let initial = _census(&_read_input(filename));
-    _nth_cencus(initial, 256).values().sum()
+    _nth_census(initial, 256).values().sum()
 }
 
 #[cfg(test)]

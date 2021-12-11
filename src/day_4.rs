@@ -10,7 +10,7 @@ fn _read_draws(name: &str) -> Vec<u32> {
         .lines()
         .next()
         .unwrap()
-        .split(",")
+        .split(',')
         .map(|v| v.parse::<u32>().unwrap())
         .collect()
 }
@@ -19,24 +19,20 @@ fn _read_boards(name: &str) -> Vec<HashMap<(bool, usize), HashSet<u32>>> {
     let text = _read_input(name);
     let mut lines = text.lines();
     lines.next(); // Discard draws
-    lines
-        .collect::<Vec<&str>>()
-        .chunks(6)
-        .map(|c| _board(c))
-        .collect()
+    lines.collect::<Vec<&str>>().chunks(6).map(_board).collect()
 }
 
 fn _board(lines: &[&str]) -> HashMap<(bool, usize), HashSet<u32>> {
     let mut result = HashMap::with_capacity(25);
-    for (row, line) in lines.into_iter().enumerate() {
+    for (row, line) in lines.iter().enumerate() {
         for (col, cell) in line.split_whitespace().enumerate() {
             result
                 .entry((false, row))
-                .or_insert(HashSet::with_capacity(5))
+                .or_insert_with(|| HashSet::with_capacity(5))
                 .insert(cell.parse().unwrap());
             result
                 .entry((true, col))
-                .or_insert(HashSet::with_capacity(5))
+                .or_insert_with(|| HashSet::with_capacity(5))
                 .insert(cell.parse().unwrap());
         }
     }
@@ -44,7 +40,7 @@ fn _board(lines: &[&str]) -> HashMap<(bool, usize), HashSet<u32>> {
     result
 }
 
-fn _cross(board: &mut HashMap<(bool, usize), HashSet<u32>>, draw: u32) -> () {
+fn _cross(board: &mut HashMap<(bool, usize), HashSet<u32>>, draw: u32) {
     for candidate in board.values_mut() {
         candidate.remove(&draw);
     }
@@ -56,7 +52,7 @@ fn _bingo(board: &HashMap<(bool, usize), HashSet<u32>>) -> bool {
 
 fn _score(board: &HashMap<(bool, usize), HashSet<u32>>) -> u32 {
     board
-        .into_iter()
+        .iter()
         .filter_map(|((is_row, _), row)| match is_row {
             false => Some(row.iter().sum::<u32>()),
             true => None,
@@ -64,7 +60,7 @@ fn _score(board: &HashMap<(bool, usize), HashSet<u32>>) -> u32 {
         .sum()
 }
 
-fn part_1(filename: &str) -> u32 {
+pub fn part_1(filename: &str) -> u32 {
     let draws = _read_draws(filename);
     let mut boards = _read_boards(filename);
     for draw in draws.into_iter() {
@@ -75,10 +71,10 @@ fn part_1(filename: &str) -> u32 {
             }
         }
     }
-    panic!("Oups");
+    panic!("Reached end of function without finding an answer");
 }
 
-fn part_2(filename: &str) -> u32 {
+pub fn part_2(filename: &str) -> u32 {
     let mut draws = _read_draws(filename).into_iter();
     let mut boards = _read_boards(filename);
     while boards.len() > 1 {
@@ -97,7 +93,7 @@ fn part_2(filename: &str) -> u32 {
             }
         }
     }
-    panic!("Oups");
+    panic!("Reached end of function without finding an answer");
 }
 
 #[cfg(test)]
