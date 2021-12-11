@@ -12,15 +12,15 @@ fn _depths(text: &str) -> Vec<u32> {
     result
 }
 
-fn part_1(filename: &str) -> usize {
+pub fn part_1(filename: &str) -> usize {
     let depths = _depths(&_read_input(1, filename));
     depths.windows(2).filter(|w| w[0] < w[1]).count()
 }
 
-fn part_2(filename: &str) -> usize {
+pub fn part_2(filename: &str) -> usize {
     let depths: Vec<u32> = _depths(&_read_input(1, filename))
         .windows(3)
-        .map(|w| w.into_iter().sum())
+        .map(|w| w.iter().sum())
         .collect();
     depths.windows(2).filter(|w| w[0] < w[1]).count()
 }

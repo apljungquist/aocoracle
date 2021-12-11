@@ -57,7 +57,7 @@ impl Arrow {
                         interpolated(self.tail.x, self.head.x),
                         interpolated(self.tail.y, self.head.y),
                     ) {
-                        result.push(Point { x: x, y: y })
+                        result.push(Point { x, y })
                     }
                 }
             }
@@ -65,14 +65,14 @@ impl Arrow {
                 let x = self.tail.x;
                 assert_eq!(x, self.head.x);
                 for y in interpolated(self.tail.y, self.head.y) {
-                    result.push(Point { x: x, y: y })
+                    result.push(Point { x, y })
                 }
             }
             (true, false) => {
                 let y = self.tail.y;
                 assert_eq!(y, self.head.y);
                 for x in interpolated(self.tail.x, self.head.x) {
-                    result.push(Point { x: x, y: y })
+                    result.push(Point { x, y })
                 }
             }
             (true, true) => panic!("Impossible"),
@@ -97,7 +97,7 @@ fn _read_arrows(name: &str) -> Vec<Arrow> {
     _read_input(name).lines().map(Arrow::parse).collect()
 }
 
-fn _print_grid(counts: &HashMap<Point, u32>) -> () {
+fn _print_grid(counts: &HashMap<Point, u32>) {
     let max_row = counts.iter().map(|(p, _)| p.y).max().unwrap();
     let max_col = counts.iter().map(|(p, _)| p.x).max().unwrap();
     println!("r:{:?}, c:{:?}", max_row, max_col);
@@ -113,7 +113,7 @@ fn _print_grid(counts: &HashMap<Point, u32>) -> () {
                     .unwrap_or(&0)
             );
         }
-        println!("");
+        println!();
     }
 }
 
@@ -134,12 +134,12 @@ fn _risk(arrows: Vec<Arrow>, include_diagonal: bool) -> u32 {
     counts.into_iter().filter(|(_, c)| 2 <= *c).count() as u32
 }
 
-fn part_1(filename: &str) -> u32 {
+pub fn part_1(filename: &str) -> u32 {
     let arrows = _read_arrows(filename);
     _risk(arrows, false)
 }
 
-fn part_2(filename: &str) -> u32 {
+pub fn part_2(filename: &str) -> u32 {
     let arrows = _read_arrows(filename);
     _risk(arrows, true)
 }
