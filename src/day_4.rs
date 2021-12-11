@@ -1,12 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-fn _read_input(name: &str) -> String {
-    fs::read_to_string(format!("day/4/{}", name)).unwrap()
-}
-
-fn _read_draws(name: &str) -> Vec<u32> {
-    _read_input(name)
+fn _draws(input: &str) -> Vec<u32> {
+    input
         .lines()
         .next()
         .unwrap()
@@ -15,9 +11,8 @@ fn _read_draws(name: &str) -> Vec<u32> {
         .collect()
 }
 
-fn _read_boards(name: &str) -> Vec<HashMap<(bool, usize), HashSet<u32>>> {
-    let text = _read_input(name);
-    let mut lines = text.lines();
+fn _boards(input: &str) -> Vec<HashMap<(bool, usize), HashSet<u32>>> {
+    let mut lines = input.lines();
     lines.next(); // Discard draws
     lines.collect::<Vec<&str>>().chunks(6).map(_board).collect()
 }
@@ -60,9 +55,9 @@ fn _score(board: &HashMap<(bool, usize), HashSet<u32>>) -> u32 {
         .sum()
 }
 
-pub fn part_1(filename: &str) -> u32 {
-    let draws = _read_draws(filename);
-    let mut boards = _read_boards(filename);
+pub fn part_1(input: &str) -> u32 {
+    let draws = _draws(input);
+    let mut boards = _boards(input);
     for draw in draws.into_iter() {
         for board in boards.iter_mut() {
             _cross(board, draw);
@@ -74,9 +69,9 @@ pub fn part_1(filename: &str) -> u32 {
     panic!("Reached end of function without finding an answer");
 }
 
-pub fn part_2(filename: &str) -> u32 {
-    let mut draws = _read_draws(filename).into_iter();
-    let mut boards = _read_boards(filename);
+pub fn part_2(input: &str) -> u32 {
+    let mut draws = _draws(input).into_iter();
+    let mut boards = _boards(input);
     while boards.len() > 1 {
         let draw: u32 = draws.next().unwrap();
         for board in boards.iter_mut() {
@@ -96,27 +91,34 @@ pub fn part_2(filename: &str) -> u32 {
     panic!("Reached end of function without finding an answer");
 }
 
+fn _from_file<F, T>(func: F, stem: &str) -> T
+where
+    F: Fn(&str) -> T,
+{
+    func(&fs::read_to_string(format!("day/4/{}.txt", stem)).unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(part_1("example.txt"), 4512);
+        assert_eq!(_from_file(part_1, "example"), 4512);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(part_1("input.txt"), 22680);
+        assert_eq!(_from_file(part_1, "input"), 22680);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(part_2("example.txt"), 1924);
+        assert_eq!(_from_file(part_2, "example"), 1924);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(part_2("input.txt"), 16168);
+        assert_eq!(_from_file(part_2, "input"), 16168);
     }
 }
