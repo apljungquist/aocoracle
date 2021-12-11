@@ -1,11 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::hash::Hash;
-
-fn _read_input(name: &str) -> String {
-    fs::read_to_string(format!("day/3/{}", name)).unwrap()
-}
-
 fn _rows(text: &str) -> Vec<Vec<bool>> {
     let mut result = Vec::new();
     for line in text.lines() {
@@ -71,10 +66,6 @@ fn _from_bits(bits: Vec<bool>) -> u32 {
         .rev()
         .enumerate()
         .map(|(i, b)| if b { u32::pow(2, i as u32) } else { 0 })
-        .map(|x| {
-            println!("{}", x);
-            x
-        })
         .sum()
 }
 
@@ -112,7 +103,6 @@ fn _oxygen(cols: &[Vec<bool>]) -> u32 {
 
 fn _carbon(cols: &[Vec<bool>]) -> u32 {
     let mut rows: HashSet<usize> = (0..cols.iter().map(|c| c.len()).max().unwrap()).collect();
-    println!("rows: {:?}", rows);
     for col in cols {
         // Since the value is boolean the least common value is whatever value is not the most common.
         // And since we negate the expression we do not need to negate the default value.
@@ -120,23 +110,15 @@ fn _carbon(cols: &[Vec<bool>]) -> u32 {
             col.iter()
                 .enumerate()
                 .filter(|(i, _)| rows.contains(i))
-                .map(|(_, v)| v)
-                .map(|x| {
-                    println!("{:?}", x);
-                    x
-                }),
+                .map(|(_, v)| v),
         )
         .unwrap_or(&true);
-        println!("target: {}", target);
         for (i, actual) in col.iter().enumerate() {
             if *actual != target {
-                println!("removing {} {}", i, actual);
                 rows.remove(&i);
             } else {
-                println!("keeping {} {}", i, actual);
             }
         }
-        println!("{:?}", rows);
         if rows.len() == 1 {
             break;
         }
@@ -146,23 +128,29 @@ fn _carbon(cols: &[Vec<bool>]) -> u32 {
     _from_bits(cols.iter().map(|v| v[row]).collect())
 }
 
-fn _oxygen_from_file(filename: &str) -> u32 {
-    let cols = _transposed(_rows(&_read_input(filename)));
-    _oxygen(&cols)
-}
-fn _carbon_from_file(filename: &str) -> u32 {
-    let cols = _transposed(_rows(&_read_input(filename)));
-    _carbon(&cols)
-}
-
-pub fn part_1(filename: &str) -> u32 {
-    let cols = _transposed(_rows(&_read_input(filename)));
+pub fn part_1(input: &str) -> u32 {
+    let cols = _transposed(_rows(input));
     _gamma(&cols) * _epsilon(&cols)
 }
 
-pub fn part_2(filename: &str) -> u32 {
-    let cols = _transposed(_rows(&_read_input(filename)));
+pub fn part_2(input: &str) -> u32 {
+    let cols = _transposed(_rows(input));
     _oxygen(&cols) * _carbon(&cols)
+}
+
+fn _oxygen_only(input: &str) -> u32 {
+    let cols = _transposed(_rows(input));
+    _oxygen(&cols)
+}
+fn _carbon_only(input: &str) -> u32 {
+    let cols = _transposed(_rows(input));
+    _carbon(&cols)
+}
+fn _from_file<F, T>(func: F, stem: &str) -> T
+where
+    F: Fn(&str) -> T,
+{
+    func(&fs::read_to_string(format!("day/3/{}.txt", stem)).unwrap())
 }
 
 #[cfg(test)]
@@ -171,30 +159,30 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(part_1("example.txt"), 198);
+        assert_eq!(_from_file(part_1, "example"), 198);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(part_1("input.txt"), 2954600);
+        assert_eq!(_from_file(part_1, "input"), 2954600);
     }
 
     #[test]
     fn oxygen_works_on_example() {
-        assert_eq!(_oxygen_from_file("example.txt"), 23);
+        assert_eq!(_from_file(_oxygen_only, "example"), 23);
     }
     #[test]
     fn carbon_works_on_example() {
-        assert_eq!(_carbon_from_file("example.txt"), 10);
+        assert_eq!(_from_file(_carbon_only, "example"), 10);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(part_2("example.txt"), 230);
+        assert_eq!(_from_file(part_2, "example"), 230);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(part_2("input.txt"), 1662846);
+        assert_eq!(_from_file(part_2, "input"), 1662846);
     }
 }

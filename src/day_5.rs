@@ -89,12 +89,8 @@ fn _counts(points: Vec<Point>) -> HashMap<Point, u32> {
     result
 }
 
-fn _read_input(name: &str) -> String {
-    fs::read_to_string(format!("day/5/{}", name)).unwrap()
-}
-
-fn _read_arrows(name: &str) -> Vec<Arrow> {
-    _read_input(name).lines().map(Arrow::parse).collect()
+fn _arrows(input: &str) -> Vec<Arrow> {
+    input.lines().map(Arrow::parse).collect()
 }
 
 fn _print_grid(counts: &HashMap<Point, u32>) {
@@ -123,25 +119,26 @@ fn _risk(arrows: Vec<Arrow>, include_diagonal: bool) -> u32 {
             .into_iter()
             .filter(|a| include_diagonal || a.is_horizontal() || a.is_vertical())
             .flat_map(|a| a.points(include_diagonal))
-            .map(|p| {
-                if p.y > 1000 {
-                    println!("{:?}", p)
-                };
-                p
-            })
             .collect(),
     );
     counts.into_iter().filter(|(_, c)| 2 <= *c).count() as u32
 }
 
-pub fn part_1(filename: &str) -> u32 {
-    let arrows = _read_arrows(filename);
+pub fn part_1(input: &str) -> u32 {
+    let arrows = _arrows(input);
     _risk(arrows, false)
 }
 
-pub fn part_2(filename: &str) -> u32 {
-    let arrows = _read_arrows(filename);
+pub fn part_2(input: &str) -> u32 {
+    let arrows = _arrows(input);
     _risk(arrows, true)
+}
+
+fn _from_file<F, T>(func: F, stem: &str) -> T
+where
+    F: Fn(&str) -> T,
+{
+    func(&fs::read_to_string(format!("day/5/{}.txt", stem)).unwrap())
 }
 
 #[cfg(test)]
@@ -150,21 +147,21 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(part_1("example.txt"), 5);
+        assert_eq!(_from_file(part_1, "example"), 5);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(part_1("input.txt"), 6225);
+        assert_eq!(_from_file(part_1, "input"), 6225);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(part_2("example.txt"), 12);
+        assert_eq!(_from_file(part_2, "example"), 12);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(part_2("input.txt"), 22116);
+        assert_eq!(_from_file(part_2, "input"), 22116);
     }
 }

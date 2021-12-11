@@ -1,10 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
 
-fn _read_input(name: &str) -> String {
-    fs::read_to_string(format!("day/6/{}", name)).unwrap()
-}
-
 fn _census(line: &str) -> HashMap<u32, u64> {
     let mut result = HashMap::new();
     for countdown in line.trim_end().split(',').map(|s| {
@@ -40,14 +36,21 @@ fn _nth_census(initial: HashMap<u32, u64>, n: u32) -> HashMap<u32, u64> {
     census
 }
 
-pub fn part_1(filename: &str) -> u64 {
-    let initial = _census(&_read_input(filename));
+pub fn part_1(input: &str) -> u64 {
+    let initial = _census(input);
     _nth_census(initial, 80).values().sum()
 }
 
-pub fn part_2(filename: &str) -> u64 {
-    let initial = _census(&_read_input(filename));
+pub fn part_2(input: &str) -> u64 {
+    let initial = _census(input);
     _nth_census(initial, 256).values().sum()
+}
+
+fn _from_file<F, T>(func: F, stem: &str) -> T
+where
+    F: Fn(&str) -> T,
+{
+    func(&fs::read_to_string(format!("day/6/{}.txt", stem)).unwrap())
 }
 
 #[cfg(test)]
@@ -56,21 +59,21 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(part_1("example.txt"), 5934);
+        assert_eq!(_from_file(part_1, "example"), 5934);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(part_1("input.txt"), 372300);
+        assert_eq!(_from_file(part_1, "input"), 372300);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(part_2("example.txt"), 26984457539);
+        assert_eq!(_from_file(part_2, "example"), 26984457539);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(part_2("input.txt"), 1675781200288);
+        assert_eq!(_from_file(part_2, "input"), 1675781200288);
     }
 }

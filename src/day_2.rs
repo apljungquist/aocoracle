@@ -3,10 +3,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::hash::Hash;
 
-fn _read_input(name: &str) -> String {
-    fs::read_to_string(format!("day/2/{}", name)).unwrap()
-}
-
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 enum Direction {
     Forward,
@@ -57,9 +53,9 @@ where
         .collect()
 }
 
-pub fn part_1(filename: &str) -> u32 {
+pub fn part_1(input: &str) -> u32 {
     let mut counts: HashMap<Direction, u32> = _map_reduce(
-        _read_input(filename).lines().map(Command::parse),
+        input.lines().map(Command::parse),
         |v| v.direction,
         |v| v.magnitude,
         |vs| vs.iter().sum(),
@@ -69,11 +65,11 @@ pub fn part_1(filename: &str) -> u32 {
             - counts.remove(&Direction::Up).unwrap_or(0))
 }
 
-pub fn part_2(filename: &str) -> u32 {
+pub fn part_2(input: &str) -> u32 {
     let mut aim = 0;
     let mut horizontal = 0;
     let mut vertical = 0;
-    for command in _read_input(filename).lines().map(Command::parse) {
+    for command in input.lines().map(Command::parse) {
         match command.direction {
             Direction::Forward => {
                 horizontal += command.magnitude;
@@ -86,27 +82,34 @@ pub fn part_2(filename: &str) -> u32 {
     horizontal * vertical
 }
 
+fn _from_file<F, T>(func: F, stem: &str) -> T
+where
+    F: Fn(&str) -> T,
+{
+    func(&fs::read_to_string(format!("day/2/{}.txt", stem)).unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(part_1("example.txt"), 150);
+        assert_eq!(_from_file(part_1, "example"), 150);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(part_1("input.txt"), 2187380);
+        assert_eq!(_from_file(part_1, "input"), 2187380);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(part_2("example.txt"), 900);
+        assert_eq!(_from_file(part_2, "example"), 900);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(part_2("input.txt"), 2086357770);
+        assert_eq!(_from_file(part_2, "input"), 2086357770);
     }
 }
