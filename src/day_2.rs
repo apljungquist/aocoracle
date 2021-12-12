@@ -16,12 +16,12 @@ struct Command {
 }
 
 impl Command {
-    fn parse(line: &str) -> Command {
+    fn parse(line: &str) -> Option<Command> {
         let mut parts = line.split_whitespace();
-        let direction = parts.next().unwrap();
-        let distance = parts.next().unwrap();
+        let direction = parts.next()?;
+        let distance = parts.next()?;
 
-        Command {
+        Some(Command {
             direction: match direction {
                 "forward" => Some(Direction::Forward),
                 "down" => Some(Direction::Down),
@@ -30,7 +30,7 @@ impl Command {
             }
             .unwrap(),
             magnitude: distance.parse::<u32>().unwrap(),
-        }
+        })
     }
 }
 
@@ -53,23 +53,30 @@ where
         .collect()
 }
 
-pub fn part_1(input: &str) -> u32 {
+pub fn part_1(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let mut commands = Vec::new();
+    for line in input.lines() {
+        let command = Command::parse(line).ok_or("Could not parse command")?;
+        commands.push(command);
+    }
     let mut counts: HashMap<Direction, u32> = _map_reduce(
-        input.lines().map(Command::parse),
+        commands.iter(),
         |v| v.direction,
         |v| v.magnitude,
         |vs| vs.iter().sum(),
     );
-    counts.remove(&Direction::Forward).unwrap_or(0)
+    let result = counts.remove(&Direction::Forward).unwrap_or(0)
         * (counts.remove(&Direction::Down).unwrap_or(0)
-            - counts.remove(&Direction::Up).unwrap_or(0))
+            - counts.remove(&Direction::Up).unwrap_or(0));
+    Ok(format!("{}", result))
 }
 
-pub fn part_2(input: &str) -> u32 {
+pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     let mut aim = 0;
     let mut horizontal = 0;
     let mut vertical = 0;
     for command in input.lines().map(Command::parse) {
+        let command = command.ok_or("Could not parse command")?;
         match command.direction {
             Direction::Forward => {
                 horizontal += command.magnitude;
@@ -79,14 +86,14 @@ pub fn part_2(input: &str) -> u32 {
             Direction::Up => aim -= command.magnitude,
         }
     }
-    horizontal * vertical
+    Ok(format!("{}", horizontal * vertical))
 }
 
 fn _from_file<F, T>(func: F, stem: &str) -> T
 where
-    F: Fn(&str) -> T,
+    F: Fn(&str) -> Result<T, Box<dyn std::error::Error>>,
 {
-    func(&fs::read_to_string(format!("day/2/{}.txt", stem)).unwrap())
+    func(&fs::read_to_string(format!("day/2/{}.txt", stem)).unwrap()).unwrap()
 }
 
 #[cfg(test)]
@@ -95,21 +102,21 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), 150);
+        assert_eq!(_from_file(part_1, "example"), "150");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 2187380);
+        assert_eq!(_from_file(part_1, "input"), "2187380");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), 900);
+        assert_eq!(_from_file(part_2, "example"), "900");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), 2086357770);
+        assert_eq!(_from_file(part_2, "input"), "2086357770");
     }
 }
