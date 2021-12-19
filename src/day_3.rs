@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::hash::Hash;
-fn _rows(text: &str) -> Vec<Vec<bool>> {
+type AnyError = Box<dyn std::error::Error>;
+
+fn _rows(text: &str) -> Result<Vec<Vec<bool>>, AnyError> {
     let mut result = Vec::new();
     for line in text.lines() {
         let mut row = Vec::new();
@@ -12,12 +14,12 @@ fn _rows(text: &str) -> Vec<Vec<bool>> {
                     '1' => Some(true),
                     _ => None,
                 }
-                .unwrap(),
+                .ok_or_else(|| format!("Could not match bit {}", bit))?,
             )
         }
         result.push(row);
     }
-    result
+    Ok(result)
 }
 
 fn _transposed(rows: Vec<Vec<bool>>) -> Vec<Vec<bool>> {
@@ -128,29 +130,29 @@ fn _carbon(cols: &[Vec<bool>]) -> u32 {
     _from_bits(cols.iter().map(|v| v[row]).collect())
 }
 
-pub fn part_1(input: &str) -> u32 {
-    let cols = _transposed(_rows(input));
-    _gamma(&cols) * _epsilon(&cols)
+pub fn part_1(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let cols = _transposed(_rows(input)?);
+    Ok(format!("{}", _gamma(&cols) * _epsilon(&cols)))
 }
 
-pub fn part_2(input: &str) -> u32 {
-    let cols = _transposed(_rows(input));
-    _oxygen(&cols) * _carbon(&cols)
+pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let cols = _transposed(_rows(input)?);
+    Ok(format!("{}", _oxygen(&cols) * _carbon(&cols)))
 }
 
-fn _oxygen_only(input: &str) -> u32 {
-    let cols = _transposed(_rows(input));
-    _oxygen(&cols)
+fn _oxygen_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
+    let cols = _transposed(_rows(input)?);
+    Ok(_oxygen(&cols))
 }
-fn _carbon_only(input: &str) -> u32 {
-    let cols = _transposed(_rows(input));
-    _carbon(&cols)
+fn _carbon_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
+    let cols = _transposed(_rows(input)?);
+    Ok(_carbon(&cols))
 }
 fn _from_file<F, T>(func: F, stem: &str) -> T
 where
-    F: Fn(&str) -> T,
+    F: Fn(&str) -> Result<T, Box<dyn std::error::Error>>,
 {
-    func(&fs::read_to_string(format!("day/3/{}.txt", stem)).unwrap())
+    func(&fs::read_to_string(format!("day/3/{}.txt", stem)).unwrap()).unwrap()
 }
 
 #[cfg(test)]
@@ -159,12 +161,12 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), 198);
+        assert_eq!(_from_file(part_1, "example"), "198");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 2954600);
+        assert_eq!(_from_file(part_1, "input"), "2954600");
     }
 
     #[test]
@@ -178,11 +180,11 @@ mod tests {
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), 230);
+        assert_eq!(_from_file(part_2, "example"), "230");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), 1662846);
+        assert_eq!(_from_file(part_2, "input"), "1662846");
     }
 }

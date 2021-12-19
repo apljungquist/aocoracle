@@ -19,7 +19,7 @@ pub struct Cli {
     part: Option<u32>,
 }
 
-const NUM_DAY: u32 = 2;
+const NUM_DAY: u32 = 3;
 
 type AnyError = Box<dyn std::error::Error>;
 type Solver = dyn Fn(&str) -> Result<String, AnyError>;
@@ -30,11 +30,13 @@ fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32), &Solver>, AnyError> {
     functions.insert((1, 2), &day_1::part_2);
     functions.insert((2, 1), &day_2::part_1);
     functions.insert((2, 2), &day_2::part_2);
+    functions.insert((3, 1), &day_3::part_1);
+    functions.insert((3, 2), &day_3::part_2);
     let functions = functions;
 
     let mut result = BTreeMap::new();
     let parts: Vec<u32> = match args.part {
-        None => 1..=NUM_DAY,
+        None => 1..=2,
         Some(1) => 1..=1,
         Some(2) => 2..=2,
         _ => return Err("Invalid part".into()),
@@ -106,6 +108,8 @@ mod tests {
         }
     }
 
+    // It is possible to construct input for day 3 that would trigger day 1, would be
+    // nice to eliminate this if it is even possible.
     #[test]
     fn specific_part_returns_1_solution_on_right_input() {
         for part in 1..=2 {
