@@ -2,6 +2,14 @@ use std::fs;
 fn _depths(text: &str) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
     let mut result = Vec::new();
     for line in text.lines() {
+        if line
+            .chars()
+            .next()
+            .ok_or("Cannot parse empty line as depth")?
+            == '0'
+        {
+            return Err("Refusing to parse line starting with 0 as depth".into());
+        }
         let depth = line.parse::<u32>()?;
         result.push(depth);
     }
