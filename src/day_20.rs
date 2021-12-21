@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use hashbrown::HashMap;
+use itertools::Itertools;
 use std::fs;
 
 type Img = HashMap<(i32, i32), bool>;
@@ -49,10 +50,8 @@ fn _lut(text: &str) -> HashMap<Key, bool> {
         .map(|(i, ch)| (_key(i), _pixel(ch)))
         .collect()
 }
-fn _once_enhanced(img: &Img, lut: &Lut, padding: bool) -> Img {
-    let mut result = HashMap::with_capacity(img.len());
-    let min = img.keys().map(|k| k.0).min().unwrap();
-    let max = img.keys().map(|k| k.0).max().unwrap();
+fn _once_enhanced(img: &Img, lut: &Lut, padding: bool, min: i32, max: i32) -> Img {
+    let mut result = HashMap::with_capacity((max - min + 3).pow(2) as usize);
     for r in min - 1..=max + 1 {
         for c in min - 1..=max + 1 {
             let key: Key = (
@@ -84,8 +83,15 @@ fn _multi_enhanced(img: &Img, lut: &Lut, num_round: usize) -> Img {
             .get(&(true, true, true, true, true, true, true, true, true))
             .unwrap(),
     };
-    let mut result = _once_enhanced(img, lut, even);
-    for i in 1..num_round {
+
+    let (min, max) = match img.keys().map(|k| k.0).minmax() {
+        itertools::MinMaxResult::NoElements => panic!("No elements"),
+        itertools::MinMaxResult::OneElement(only) => (only, only),
+        itertools::MinMaxResult::MinMax(min, max) => (min, max),
+    };
+
+    let mut result = _once_enhanced(img, lut, even, min, max);
+    for i in 1..num_round as i32 {
         result = _once_enhanced(
             &result,
             lut,
@@ -94,6 +100,8 @@ fn _multi_enhanced(img: &Img, lut: &Lut, num_round: usize) -> Img {
                 1 => odd,
                 _ => panic!("Oups"),
             },
+            min - i,
+            max + i,
         );
     }
     result
