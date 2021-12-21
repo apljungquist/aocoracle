@@ -1,6 +1,5 @@
-use std::fs;
-
 use hashbrown::HashMap;
+use std::fs;
 
 fn _starting_positions(input: &str) -> [u64; 2] {
     let re = regex::Regex::new(r"^Player (1|2) starting position: (\d+)$").unwrap();
@@ -27,38 +26,35 @@ fn _quantum_die() -> HashMap<u64, u64> {
 }
 
 fn _quantum(
+    cache: &mut HashMap<(u64, u64, u64, u64), [u64; 2]>,
     die: &HashMap<u64, u64>,
-    positions: [u64; 2],
-    scores: [u64; 2],
-    hero: usize,
-    num_universe: u64,
-    result: &mut [u64; 2],
-) {
-    let villain = (hero + 1) % 2;
-    for (num_step, multiplier) in die.iter() {
-        let new_num_universe = multiplier * num_universe;
-        let position = (positions[hero] + num_step) % 10;
-        let score = scores[hero] + position + 1;
-        if 21 <= score {
-            result[hero] += new_num_universe;
-            continue;
-        }
-
-        let mut new_positions = positions;
-        new_positions[hero] = position;
-
-        let mut new_scores = scores;
-        new_scores[hero] = score;
-
-        _quantum(
-            die,
-            new_positions,
-            new_scores,
-            villain,
-            new_num_universe,
-            result,
-        );
+    lpos: u64,
+    rpos: u64,
+    lscore: u64,
+    rscore: u64,
+) -> [u64; 2] {
+    if 21 <= rscore {
+        assert!(lscore < 21);
+        return [0, 1];
     }
+    let mut result = [0; 2];
+    for (num_step, multiplier) in die.iter() {
+        let pos = (lpos + num_step) % 10;
+        let score = lscore + pos + 1;
+        let key = (rpos, pos, rscore, score);
+        let sub = {
+            if !cache.contains_key(&key) {
+                let value = _quantum(cache, die, rpos, pos, rscore, score);
+                cache.insert(key, value);
+                value
+            } else {
+                *cache.get(&key).unwrap()
+            }
+        };
+        result[0] += sub[1] * multiplier;
+        result[1] += sub[0] * multiplier;
+    }
+    result
 }
 
 pub fn part_1(input: &str) -> u64 {
@@ -83,10 +79,18 @@ pub fn part_1(input: &str) -> u64 {
 
 pub fn part_2(input: &str) -> u64 {
     let positions = _starting_positions(input);
-    let scores = [0; 2];
-    let mut result = [0; 2];
-    _quantum(&_quantum_die(), positions, scores, 0, 1, &mut result);
-    *result.iter().max().unwrap()
+    let mut cache = HashMap::new();
+    *_quantum(
+        &mut cache,
+        &_quantum_die(),
+        positions[0],
+        positions[1],
+        0,
+        0,
+    )
+    .iter()
+    .max()
+    .unwrap()
 }
 
 fn _from_file<F, T>(func: F, stem: &str) -> T
