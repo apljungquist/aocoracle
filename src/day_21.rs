@@ -2,12 +2,16 @@ use std::fs;
 
 use hashbrown::HashMap;
 
-fn _starting_positions(input: &str) -> Vec<u64> {
+fn _starting_positions(input: &str) -> [u64; 2] {
     let re = regex::Regex::new(r"^Player (1|2) starting position: (\d+)$").unwrap();
-    input
+    let mut result = [0; 2];
+    let positions: Vec<u64> = input
         .lines()
         .map(|line| re.captures(line).unwrap()[2].parse::<u64>().unwrap() - 1)
-        .collect()
+        .collect();
+    result[0] = positions[0];
+    result[1] = positions[1];
+    result
 }
 
 fn _quantum_die() -> HashMap<u64, u64> {
@@ -24,12 +28,13 @@ fn _quantum_die() -> HashMap<u64, u64> {
 
 fn _quantum(
     die: &HashMap<u64, u64>,
-    positions: Vec<u64>,
-    scores: Vec<u64>,
+    positions: [u64; 2],
+    scores: [u64; 2],
     hero: usize,
     num_universe: u64,
-    result: &mut Vec<u64>,
+    result: &mut [u64; 2],
 ) {
+    let villain = (hero + 1) % 2;
     for (num_step, multiplier) in die.iter() {
         let new_num_universe = multiplier * num_universe;
         let position = (positions[hero] + num_step) % 10;
@@ -39,15 +44,17 @@ fn _quantum(
             continue;
         }
 
-        let mut new_positions = positions.clone();
+        let mut new_positions = positions;
         new_positions[hero] = position;
-        let mut new_scores = scores.clone();
+
+        let mut new_scores = scores;
         new_scores[hero] = score;
+
         _quantum(
             die,
             new_positions,
             new_scores,
-            (hero + 1) % 2,
+            villain,
             new_num_universe,
             result,
         );
@@ -76,8 +83,8 @@ pub fn part_1(input: &str) -> u64 {
 
 pub fn part_2(input: &str) -> u64 {
     let positions = _starting_positions(input);
-    let scores = vec![0; 2];
-    let mut result = vec![0; 2];
+    let scores = [0; 2];
+    let mut result = [0; 2];
     _quantum(&_quantum_die(), positions, scores, 0, 1, &mut result);
     *result.iter().max().unwrap()
 }
