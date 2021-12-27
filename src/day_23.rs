@@ -1,6 +1,10 @@
+use std::cmp::{Ordering, Reverse};
+use std::collections::BinaryHeap;
 use std::fs;
+use std::hash::{Hash, Hasher};
+use std::iter::Rev;
 
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 
 type Tile = u64;
 type Room = u64;
@@ -218,98 +222,184 @@ fn _print_all(title: &str, hallway: Hallway, rooms: Rooms) {
     println!("{}", title);
     println!("{}", _fmt(hallway, 11));
     for room in rooms {
-        println!("{}", _fmt(room, 5));
+        println!("{}", _fmt(room, 4));
     }
 }
 
-fn _min_downstream_cost(rooms: Rooms) -> u64 {
+fn _min_downstream_cost_lose(rooms: Rooms) -> u64 {
     let mut result = 0;
     for (src, room) in rooms.iter().enumerate() {
-        for j in 0.. {
-            if !_contains(*room, j) {
+        for i in 0.. {
+            if !_contains(*room, i) {
                 break;
             }
-            let dst = _get(*room, j);
+            let dst = _get(*room, i);
             if src as u64 != dst {
-                result += _distance(_tile(src as u64), _tile(dst)) * _multiplier(dst);
+                let distance = _distance(_tile(src as u64), _tile(dst)) * _multiplier(dst);
+                if distance < 2 {
+                    result += 2;
+                } else {
+                    result += distance;
+                }
             }
         }
     }
     result
 }
 
-fn _min_cost_from_hallway(
-    cache: &mut HashMap<(Hallway, Rooms), Option<u64>>,
-    paths: &Paths,
-    mut hallway: Hallway,
-    mut rooms: Rooms,
-    upstream_cost: u64,
-    mut best_total_cost: u64,
-) -> Option<u64> {
-    let key = (hallway, rooms);
-    if cache.contains_key(&key) {
-        return *cache.get(&key).unwrap();
+fn _min_downstream_cost_tight(rooms: Rooms) -> u64 {
+    let mut result = 0;
+    for (src, room) in rooms.iter().enumerate() {
+        for i in 0.. {
+            if !_contains(*room, i) {
+                break;
+            }
+            let dst = _get(*room, i);
+            for j in i.. {
+                if !_contains(*room, j) {
+                    break;
+                }
+                if src as u64 != _get(*room, j) {
+                    let distance = _distance(_tile(src as u64), _tile(dst)) * _multiplier(dst);
+                    if distance < 2 {
+                        result += 2;
+                    } else {
+                        result += distance;
+                    }
+                    break;
+                }
+            }
+        }
     }
+    result
+}
 
-    _move_from_hallway(paths, &mut hallway, &mut rooms);
+#[derive(Clone, Eq, Hash, PartialEq)]
+struct State {
+    hallway: Hallway,
+    rooms: Rooms,
+}
 
-    if _is_empty(hallway)
-        && (0..NUM_ROOM as u64)
-            .all(|i| !_is_empty(rooms[i as usize]) && _room_contains_only(rooms[i as usize], i))
-    {
-        cache.insert(key, Some(0));
-        return Some(0);
+impl State {
+    fn new(hallway: Hallway, rooms: Rooms) -> State {
+        State {
+            hallway: hallway,
+            rooms: rooms,
+        }
     }
+}
 
-    let mut ok = false;
-    let mut best_cost = std::u64::MAX / 2;
-    for src in 0..NUM_ROOM as u64 {
-        if _room_contains_only(rooms[src as usize], src) {
+#[derive(Eq, PartialEq)]
+struct Item {
+    state: State,
+    min_total_cost: u64,
+}
+
+impl PartialOrd for Item {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.min_total_cost.partial_cmp(&other.min_total_cost)
+    }
+}
+
+impl Ord for Item {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.min_total_cost.cmp(&other.min_total_cost)
+    }
+}
+
+impl Item {
+    fn new(state: State, cost: u64) -> Item {
+        let min_total_cost = cost + _min_downstream_cost_lose(state.rooms);
+        Item {
+            state,
+            min_total_cost,
+        }
+    }
+}
+
+fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
+    let mut order = BinaryHeap::new();
+    let mut best = HashMap::new();
+    let mut open = HashSet::new();
+    open.insert(initial.clone());
+    best.insert(initial.clone(), 0);
+    order.push(Reverse(Item::new(initial, 0)));
+
+    let mut num_created = 0;
+    let mut num_expanded = 0;
+    let mut num_duplicated = 0;
+    let mut num_pruned = 0;
+
+    while let Some(item) = order.pop() {
+        let state = item.0.state;
+        let cost = *best.get(&state).unwrap();
+        if open.take(&state).is_none() {
+            num_duplicated += 1;
             continue;
         }
 
-        let mut new_rooms = rooms;
-        let (new_room, amphipod) = _pop(rooms[src as usize]);
-        new_rooms[src as usize] = new_room;
+        if _is_empty(state.hallway)
+            && (0..NUM_ROOM as u64).all(|i| {
+                !_is_empty(state.rooms[i as usize])
+                    && _room_contains_only(state.rooms[i as usize], i)
+            })
+        {
+            println!("");
+            println!("Created:    {}", num_created);
+            println!("Expanded:   {}", num_expanded);
+            println!("Duplicated: {}", num_duplicated);
+            println!("Pruned:     {}", num_pruned);
+            println!("Remaining:  {}", order.len());
+            println!(
+                "Total:      {}",
+                num_expanded + num_duplicated + num_pruned + order.len()
+            );
+            return Some(cost);
+        }
 
-        for dst in _accessible_tiles(paths, hallway, src) {
-            let marginal_cost = _room_hallway_distance(src, dst, amphipod) * _multiplier(amphipod);
-
-            let min_downstream_cost = _min_downstream_cost(new_rooms);
-            let min_total_cost = upstream_cost + marginal_cost + min_downstream_cost;
-            if best_total_cost <= min_total_cost {
+        num_expanded += 1;
+        for src in 0..NUM_ROOM as u64 {
+            if _room_contains_only(state.rooms[src as usize], src) {
                 continue;
             }
 
-            let new_hallway = _insert(hallway, dst, amphipod);
+            let mut new_rooms = state.rooms;
+            let (new_room, amphipod) = _pop(new_rooms[src as usize]);
+            new_rooms[src as usize] = new_room;
 
-            let downstream_cost = match _min_cost_from_hallway(
-                cache,
-                paths,
-                new_hallway,
-                new_rooms,
-                upstream_cost + marginal_cost,
-                best_total_cost,
-            ) {
-                Some(cost) => cost,
-                None => continue,
-            };
-            let cost = marginal_cost + downstream_cost;
-            if cost < best_cost {
-                ok = true;
-                best_cost = cost;
-                best_total_cost = upstream_cost + cost;
-            } else {
+            for dst in _accessible_tiles(paths, state.hallway, src) {
+                num_created += 1;
+
+                let mut new_hallway = _insert(state.hallway, dst, amphipod);
+                _move_from_hallway(paths, &mut new_hallway, &mut new_rooms);
+                let new_state = State::new(new_hallway, new_rooms);
+
+                let marginal_cost =
+                    _room_hallway_distance(src, dst, amphipod) * _multiplier(amphipod);
+                let new_cost = cost + marginal_cost;
+                if let Some(best_cost) = best.get(&new_state) {
+                    if *best_cost <= new_cost {
+                        num_pruned += 1;
+                        continue;
+                    }
+                }
+                open.insert(new_state.clone());
+                best.insert(new_state.clone(), new_cost);
+                order.push(Reverse(Item::new(new_state, new_cost)));
             }
         }
     }
-    if ok {
-        cache.insert(key, Some(best_cost));
-        return Some(best_cost);
-    }
-    cache.insert(key, None);
-    None
+    return None;
 }
+
+// fn a_star(start:State){
+//     let mut open = BinaryHeap::new();
+//     open.push(Item::new(start.clone(),0));
+//
+//     let mut came_from = HashMap::new();
+//
+//     let mut g_score = HashMap::new();
+// }
 
 fn _departure_penalty(room: Room, room_num: u64) -> u64 {
     let mut result = 0;
@@ -357,9 +447,7 @@ fn _penalty(rooms: Rooms) -> u64 {
 
 fn _part_x(rooms: Rooms) -> u64 {
     let paths = _paths();
-    let mut cache = HashMap::new();
-    let from_hallway =
-        _min_cost_from_hallway(&mut cache, &paths, 0, rooms, 0, std::u64::MAX).unwrap();
+    let from_hallway = _min_cost_from_hallway(&paths, State::new(0, rooms)).unwrap();
     let from_rooms = _penalty(rooms);
     from_hallway + from_rooms
 }
@@ -391,7 +479,6 @@ pub fn part_2(input: &str) -> u64 {
     rooms[3] = _push(rooms[3], 0);
     rooms[3] = _push(rooms[3], tmp.1);
 
-    _print_all("Start", 0, rooms);
     _part_x(rooms)
 }
 
