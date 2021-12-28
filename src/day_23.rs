@@ -1,10 +1,9 @@
 use std::cmp::{Ordering, Reverse};
 use std::collections::BinaryHeap;
 use std::fs;
-use std::hash::{Hash, Hasher};
-use std::iter::Rev;
+use std::hash::Hash;
 
-use hashbrown::{HashMap, HashSet};
+use hashbrown::HashMap;
 
 type Tile = u64;
 type Room = u64;
@@ -282,10 +281,7 @@ struct State {
 
 impl State {
     fn new(hallway: Hallway, rooms: Rooms) -> State {
-        State {
-            hallway: hallway,
-            rooms: rooms,
-        }
+        State { hallway, rooms }
     }
 }
 
@@ -344,7 +340,7 @@ fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
                     && _room_contains_only(state.rooms[i as usize], i)
             })
         {
-            println!("");
+            println!();
             println!("Created:    {}", num_created);
             println!("Expanded:   {}", num_expanded);
             println!("Duplicated: {}", num_duplicated);
@@ -388,7 +384,7 @@ fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
             }
         }
     }
-    return None;
+    None
 }
 
 // fn a_star(start:State){
