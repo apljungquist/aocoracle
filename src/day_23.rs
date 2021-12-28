@@ -293,6 +293,7 @@ impl State {
 struct Item {
     state: State,
     min_total_cost: u64,
+    cost: u64,
 }
 
 impl PartialOrd for Item {
@@ -313,6 +314,7 @@ impl Item {
         Item {
             state,
             min_total_cost,
+            cost,
         }
     }
 }
@@ -320,8 +322,6 @@ impl Item {
 fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
     let mut order = BinaryHeap::new();
     let mut best = HashMap::new();
-    let mut open = HashSet::new();
-    open.insert(initial.clone());
     best.insert(initial.clone(), 0);
     order.push(Reverse(Item::new(initial, 0)));
 
@@ -330,10 +330,10 @@ fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
     let mut num_duplicated = 0;
     let mut num_pruned = 0;
 
-    while let Some(item) = order.pop() {
-        let state = item.0.state;
+    while let Some(Reverse { 0: item }) = order.pop() {
+        let state = item.state;
         let cost = *best.get(&state).unwrap();
-        if open.take(&state).is_none() {
+        if cost < item.cost {
             num_duplicated += 1;
             continue;
         }
@@ -383,7 +383,6 @@ fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
                         continue;
                     }
                 }
-                open.insert(new_state.clone());
                 best.insert(new_state.clone(), new_cost);
                 order.push(Reverse(Item::new(new_state, new_cost)));
             }
