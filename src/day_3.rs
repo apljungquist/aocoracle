@@ -152,7 +152,7 @@ fn _from_file<F, T>(func: F, stem: &str) -> T
 where
     F: Fn(&str) -> Result<T, Box<dyn std::error::Error>>,
 {
-    func(&fs::read_to_string(format!("day/3/{}.txt", stem)).unwrap()).unwrap()
+    func(&fs::read_to_string(format!("inputs/03/{}.txt", stem)).unwrap()).unwrap()
 }
 
 #[cfg(test)]

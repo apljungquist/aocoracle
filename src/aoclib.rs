@@ -107,7 +107,8 @@ mod tests {
             };
             let input_day = day;
             for stem in STEMS {
-                let stdin = fs::read_to_string(format!("day/{}/{}.txt", input_day, stem)).unwrap();
+                let stdin =
+                    fs::read_to_string(format!("inputs/{:02}/{}.txt", input_day, stem)).unwrap();
                 println!("day:{} input_day:{} stem:{}", day, input_day, stem);
                 assert_eq!(helper(&args, &stdin).unwrap().len(), 2);
             }
@@ -125,8 +126,8 @@ mod tests {
             };
             for input_day in 1..=NUM_DAY {
                 for stem in STEMS {
-                    let stdin =
-                        fs::read_to_string(format!("day/{}/{}.txt", input_day, stem)).unwrap();
+                    let stdin = fs::read_to_string(format!("inputs/{:02}/{}.txt", input_day, stem))
+                        .unwrap();
                     println!("day:* input_day:{} stem:{}", input_day, stem);
                     assert_eq!(helper(&args, &stdin).unwrap().len(), 1);
                 }
@@ -144,8 +145,8 @@ mod tests {
             };
             for input_day in (1..=NUM_DAY).filter(|d| *d != day) {
                 for stem in STEMS {
-                    let stdin =
-                        fs::read_to_string(format!("day/{}/{}.txt", input_day, stem)).unwrap();
+                    let stdin = fs::read_to_string(format!("inputs/{:02}/{}.txt", input_day, stem))
+                        .unwrap();
                     println!("day:{} input_day:{} stem:{}", day, input_day, stem);
                     helper(&args, &stdin).unwrap().len();
                 }
