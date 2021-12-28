@@ -97,7 +97,7 @@ fn _from_file<F, T>(func: F, stem: &str) -> T
 where
     F: Fn(&str) -> T,
 {
-    func(&fs::read_to_string(format!("day/21/{}.txt", stem)).unwrap())
+    func(&fs::read_to_string(format!("inputs/21/{}.txt", stem)).unwrap())
 }
 
 #[cfg(test)]
