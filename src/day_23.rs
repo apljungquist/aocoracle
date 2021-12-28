@@ -305,8 +305,8 @@ impl Ord for Item {
 }
 
 impl Item {
-    fn new(state: State, cost: u64) -> Item {
-        let min_total_cost = cost + _min_downstream_cost_lose(state.rooms);
+    fn new(min_downstream_cost: u64, state: State, cost: u64) -> Item {
+        let min_total_cost = cost + min_downstream_cost;
         Item {
             state,
             min_total_cost,
@@ -315,11 +315,61 @@ impl Item {
     }
 }
 
-fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
+struct Rules {
+    paths: Paths,
+}
+
+impl Rules {
+    fn new() -> Rules {
+        Rules { paths: _paths() }
+    }
+
+    fn is_goal(state: &State) -> bool {
+        _is_empty(state.hallway)
+            && (0..NUM_ROOM as u64).all(|i| {
+                !_is_empty(state.rooms[i as usize])
+                    && _room_contains_only(state.rooms[i as usize], i)
+            })
+    }
+    fn successors(&self, state: &State) -> Vec<(State, u64)> {
+        let mut result = Vec::new();
+        for src in 0..NUM_ROOM as u64 {
+            if _room_contains_only(state.rooms[src as usize], src) {
+                continue;
+            }
+
+            let mut new_rooms = state.rooms;
+            let (new_room, amphipod) = _pop(new_rooms[src as usize]);
+            new_rooms[src as usize] = new_room;
+
+            for dst in _accessible_tiles(&self.paths, state.hallway, src) {
+                let mut new_hallway = _insert(state.hallway, dst, amphipod);
+                _move_from_hallway(&self.paths, &mut new_hallway, &mut new_rooms);
+                let new_state = State::new(new_hallway, new_rooms);
+
+                let marginal_cost =
+                    _room_hallway_distance(src, dst, amphipod) * _multiplier(amphipod);
+                result.push((new_state, marginal_cost));
+            }
+        }
+        result
+    }
+
+    fn min_distance(state: &State) -> u64 {
+        _min_downstream_cost_lose(state.rooms)
+    }
+}
+
+fn astar<FG, FS, FM>(initial: State, is_goal: FG, successors: FS, min_distance: FM) -> Option<u64>
+where
+    FG: Fn(&State) -> bool,
+    FS: Fn(&State) -> Vec<(State, u64)>,
+    FM: Fn(&State) -> u64,
+{
     let mut order = BinaryHeap::new();
     let mut best = HashMap::new();
     best.insert(initial.clone(), 0);
-    order.push(Reverse(Item::new(initial, 0)));
+    order.push(Reverse(Item::new(min_distance(&initial), initial, 0)));
 
     let mut num_created = 0;
     let mut num_expanded = 0;
@@ -334,12 +384,7 @@ fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
             continue;
         }
 
-        if _is_empty(state.hallway)
-            && (0..NUM_ROOM as u64).all(|i| {
-                !_is_empty(state.rooms[i as usize])
-                    && _room_contains_only(state.rooms[i as usize], i)
-            })
-        {
+        if is_goal(&state) {
             println!();
             println!("Created:    {}", num_created);
             println!("Expanded:   {}", num_expanded);
@@ -352,49 +397,36 @@ fn _min_cost_from_hallway(paths: &Paths, initial: State) -> Option<u64> {
             );
             return Some(cost);
         }
-
         num_expanded += 1;
-        for src in 0..NUM_ROOM as u64 {
-            if _room_contains_only(state.rooms[src as usize], src) {
-                continue;
-            }
+        for (new_state, marginal_cost) in successors(&state) {
+            num_created += 1;
 
-            let mut new_rooms = state.rooms;
-            let (new_room, amphipod) = _pop(new_rooms[src as usize]);
-            new_rooms[src as usize] = new_room;
-
-            for dst in _accessible_tiles(paths, state.hallway, src) {
-                num_created += 1;
-
-                let mut new_hallway = _insert(state.hallway, dst, amphipod);
-                _move_from_hallway(paths, &mut new_hallway, &mut new_rooms);
-                let new_state = State::new(new_hallway, new_rooms);
-
-                let marginal_cost =
-                    _room_hallway_distance(src, dst, amphipod) * _multiplier(amphipod);
-                let new_cost = cost + marginal_cost;
-                if let Some(best_cost) = best.get(&new_state) {
-                    if *best_cost <= new_cost {
-                        num_pruned += 1;
-                        continue;
-                    }
+            let new_cost = cost + marginal_cost;
+            if let Some(best_cost) = best.get(&new_state) {
+                if *best_cost <= new_cost {
+                    num_pruned += 1;
+                    continue;
                 }
-                best.insert(new_state.clone(), new_cost);
-                order.push(Reverse(Item::new(new_state, new_cost)));
             }
+            best.insert(new_state.clone(), new_cost);
+            order.push(Reverse(Item::new(
+                min_distance(&new_state),
+                new_state,
+                new_cost,
+            )));
         }
     }
     None
 }
 
-// fn a_star(start:State){
-//     let mut open = BinaryHeap::new();
-//     open.push(Item::new(start.clone(),0));
-//
-//     let mut came_from = HashMap::new();
-//
-//     let mut g_score = HashMap::new();
-// }
+fn _min_cost_from_hallway(rules: &Rules, initial: State) -> Option<u64> {
+    astar(
+        initial,
+        Rules::is_goal,
+        |n| rules.successors(n),
+        Rules::min_distance,
+    )
+}
 
 fn _departure_penalty(room: Room, room_num: u64) -> u64 {
     let mut result = 0;
@@ -441,8 +473,8 @@ fn _penalty(rooms: Rooms) -> u64 {
 }
 
 fn _part_x(rooms: Rooms) -> u64 {
-    let paths = _paths();
-    let from_hallway = _min_cost_from_hallway(&paths, State::new(0, rooms)).unwrap();
+    let game = Rules::new();
+    let from_hallway = _min_cost_from_hallway(&game, State::new(0, rooms)).unwrap();
     let from_rooms = _penalty(rooms);
     from_hallway + from_rooms
 }
