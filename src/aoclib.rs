@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use structopt::StructOpt;
 
+pub mod day_08;
 pub mod day_1;
 pub mod day_2;
 pub mod day_20;
