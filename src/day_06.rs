@@ -8,7 +8,16 @@ fn _census(line: &str) -> Result<Census, AnyError> {
         let countdown = countdown.parse::<u32>()?;
         *(result.entry(countdown).or_insert(0)) += 1;
     }
-    Ok(result)
+    match *result
+        .keys()
+        .max()
+        .ok_or("Expected at least 1 fish but got 0")?
+    {
+        v if v > 8 => {
+            Err(format!("Highest cooldown is {}, this is probably day 7 input", v).into())
+        }
+        _ => Ok(result),
+    }
 }
 
 fn _next_census(prev: &Census) -> Census {
