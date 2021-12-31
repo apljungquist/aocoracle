@@ -4,20 +4,20 @@ use std::collections::{BTreeMap, HashMap};
 
 use structopt::StructOpt;
 
+pub mod day_01;
+pub mod day_02;
+pub mod day_03;
+pub mod day_04;
+pub mod day_05;
+pub mod day_06;
+pub mod day_07;
 pub mod day_08;
-pub mod day_1;
-pub mod day_2;
 pub mod day_20;
 pub mod day_21;
 pub mod day_22;
 pub mod day_23;
 pub mod day_24;
 pub mod day_25;
-pub mod day_3;
-pub mod day_4;
-pub mod day_5;
-pub mod day_6;
-pub mod day_7;
 
 #[derive(StructOpt)]
 pub struct Cli {
@@ -34,12 +34,12 @@ type Solver = dyn Fn(&str) -> Result<String, AnyError>;
 
 fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32), &Solver>, AnyError> {
     let mut functions: HashMap<(u32, u32), &Solver> = HashMap::new();
-    functions.insert((1, 1), &day_1::part_1);
-    functions.insert((1, 2), &day_1::part_2);
-    functions.insert((2, 1), &day_2::part_1);
-    functions.insert((2, 2), &day_2::part_2);
-    functions.insert((3, 1), &day_3::part_1);
-    functions.insert((3, 2), &day_3::part_2);
+    functions.insert((1, 1), &day_01::part_1);
+    functions.insert((1, 2), &day_01::part_2);
+    functions.insert((2, 1), &day_02::part_1);
+    functions.insert((2, 2), &day_02::part_2);
+    functions.insert((3, 1), &day_03::part_1);
+    functions.insert((3, 2), &day_03::part_2);
     let functions = functions;
 
     let mut result = BTreeMap::new();
