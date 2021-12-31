@@ -2,15 +2,24 @@ use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs;
 
-fn _census(line: &str) -> HashMap<u32, u64> {
+type AnyError = Box<dyn std::error::Error>;
+type Census = HashMap<u32, u64>;
+fn _census(line: &str) -> Result<Census, AnyError> {
     let mut result = HashMap::new();
-    for countdown in line.trim_end().split(',').map(|s| {
-        s.parse::<u32>()
-            .unwrap_or_else(|_| panic!("Expected an int but got '{}'", s))
-    }) {
+    for countdown in line.trim_end().split(',') {
+        let countdown = countdown.parse::<u32>()?;
         *(result.entry(countdown).or_insert(0)) += 1;
     }
-    result
+    match *result
+        .keys()
+        .max()
+        .ok_or("Expected at least 1 fish but got 0")?
+    {
+        v if v < 9 => {
+            Err(format!("Righmost position is {}, this is probably day 6 input", v).into())
+        }
+        _ => Ok(result),
+    }
 }
 
 fn _median(census: &HashMap<u32, u64>) -> u32 {
@@ -41,29 +50,31 @@ fn _quadratic_cost(census: &HashMap<u32, u64>, location: u32) -> u64 {
         .sum()
 }
 
-pub fn part_1(input: &str) -> u64 {
-    let census = _census(input);
-    _linear_cost(&census, _median(&census))
+pub fn part_1(input: &str) -> Result<String, AnyError> {
+    let census = _census(input)?;
+    let cost = _linear_cost(&census, _median(&census));
+    Ok(format!("{}", cost))
 }
 
-pub fn part_2(input: &str) -> u64 {
-    let census = _census(input);
+pub fn part_2(input: &str) -> Result<String, AnyError> {
+    let census = _census(input)?;
     let (min, max) = match census.keys().minmax() {
         itertools::MinMaxResult::NoElements => panic!("No elements"),
         itertools::MinMaxResult::OneElement(only) => (*only, *only),
         itertools::MinMaxResult::MinMax(min, max) => (*min, *max),
     };
-    (min..=max)
+    let cost = (min..=max)
         .map(|location| _quadratic_cost(&census, location))
         .min()
-        .unwrap() as u64
+        .unwrap() as u64;
+    Ok(format!("{}", cost))
 }
 
 fn _from_file<F, T>(func: F, stem: &str) -> T
 where
-    F: Fn(&str) -> T,
+    F: Fn(&str) -> Result<T, AnyError>,
 {
-    func(&fs::read_to_string(format!("inputs/07/{}.txt", stem)).unwrap())
+    func(&fs::read_to_string(format!("inputs/07/{}.txt", stem)).unwrap()).unwrap()
 }
 
 #[cfg(test)]
@@ -72,21 +83,21 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), 37);
+        assert_eq!(_from_file(part_1, "example"), "37");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 342641);
+        assert_eq!(_from_file(part_1, "input"), "342641");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), 168);
+        assert_eq!(_from_file(part_2, "example"), "168");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), 93006301);
+        assert_eq!(_from_file(part_2, "input"), "93006301");
     }
 }
