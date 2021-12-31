@@ -9,7 +9,7 @@ mod day_02;
 mod day_03;
 mod day_04;
 mod day_05;
-pub mod day_06;
+mod day_06;
 pub mod day_07;
 pub mod day_08;
 pub mod day_20;
@@ -27,7 +27,7 @@ pub struct Cli {
     part: Option<u32>,
 }
 
-const NUM_DAY: u32 = 5;
+const NUM_DAY: u32 = 6;
 
 type AnyError = Box<dyn std::error::Error>;
 type Solver = dyn Fn(&str) -> Result<String, AnyError>;
@@ -44,6 +44,8 @@ fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32), &Solver>, AnyError> {
     functions.insert((4, 2), &day_04::part_2);
     functions.insert((5, 1), &day_05::part_1);
     functions.insert((5, 2), &day_05::part_2);
+    functions.insert((6, 1), &day_06::part_1);
+    functions.insert((6, 2), &day_06::part_2);
     let functions = functions;
 
     let mut result = BTreeMap::new();
