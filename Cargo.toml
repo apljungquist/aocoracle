@@ -1,9 +1,10 @@
 [package]
-name = "aoc2021rs"
+name = "aocoracle"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Universal solver for advent of code problems"
+license = "MIT"
+exclude = [".*","inputs/"]
 
 [dependencies]
 clap = "2.33.3"
@@ -17,5 +18,5 @@ name = "aoclib"
 path = "src/aoclib.rs"
 
 [[bin]]
-name = "aoc2021"
+name = "aocoracle"
 path = "src/aoc.rs"
