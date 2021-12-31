@@ -4,10 +4,10 @@ use std::collections::{BTreeMap, HashMap};
 
 use structopt::StructOpt;
 
-pub mod day_01;
-pub mod day_02;
-pub mod day_03;
-pub mod day_04;
+mod day_01;
+mod day_02;
+mod day_03;
+mod day_04;
 pub mod day_05;
 pub mod day_06;
 pub mod day_07;
@@ -27,7 +27,7 @@ pub struct Cli {
     part: Option<u32>,
 }
 
-const NUM_DAY: u32 = 3;
+const NUM_DAY: u32 = 4;
 
 type AnyError = Box<dyn std::error::Error>;
 type Solver = dyn Fn(&str) -> Result<String, AnyError>;
@@ -40,6 +40,8 @@ fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32), &Solver>, AnyError> {
     functions.insert((2, 2), &day_02::part_2);
     functions.insert((3, 1), &day_03::part_1);
     functions.insert((3, 2), &day_03::part_2);
+    functions.insert((4, 1), &day_04::part_1);
+    functions.insert((4, 2), &day_04::part_2);
     let functions = functions;
 
     let mut result = BTreeMap::new();
