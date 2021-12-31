@@ -24,6 +24,9 @@ fn _boards(input: &str) -> Result<Vec<Board>, AnyError> {
     for chunk in lines.collect::<Vec<&str>>().chunks(6) {
         result.push(_board(chunk)?);
     }
+    if result.is_empty() {
+        return Err(format!("Expected at least 1 board but got {}", result.len()).into());
+    }
     Ok(result)
 }
 
