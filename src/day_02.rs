@@ -27,8 +27,7 @@ impl Command {
                 "down" => Some(Direction::Down),
                 "up" => Some(Direction::Up),
                 _ => None,
-            }
-            .unwrap(),
+            }?,
             magnitude: distance.parse::<u32>().unwrap(),
         })
     }

@@ -3,7 +3,7 @@ use std::fs;
 use std::hash::Hash;
 use std::iter::zip;
 
-use regex;
+type AnyError = Box<dyn std::error::Error>;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 struct Point {
@@ -26,19 +26,21 @@ fn interpolated(start: i32, stop: i32) -> Vec<i32> {
 }
 
 impl Arrow {
-    fn parse(line: &str) -> Arrow {
+    fn parse(line: &str) -> Result<Arrow, AnyError> {
         let re = regex::Regex::new(r"^(\d+),(\d+) -> (\d+),(\d+)$").unwrap();
-        let cap = re.captures(line).unwrap();
-        Arrow {
+        let cap = re
+            .captures(line)
+            .ok_or(format!("Could not capture an arrow in line {}", line))?;
+        Ok(Arrow {
             tail: Point {
-                x: cap[1].parse::<i32>().unwrap(),
-                y: cap[2].parse::<i32>().unwrap(),
+                x: cap[1].parse::<i32>()?,
+                y: cap[2].parse::<i32>()?,
             },
             head: Point {
-                x: cap[3].parse::<i32>().unwrap(),
-                y: cap[4].parse::<i32>().unwrap(),
+                x: cap[3].parse::<i32>()?,
+                y: cap[4].parse::<i32>()?,
             },
-        }
+        })
     }
 
     fn is_horizontal(&self) -> bool {
@@ -89,8 +91,12 @@ fn _counts(points: Vec<Point>) -> HashMap<Point, u32> {
     result
 }
 
-fn _arrows(input: &str) -> Vec<Arrow> {
-    input.lines().map(Arrow::parse).collect()
+fn _arrows(input: &str) -> Result<Vec<Arrow>, AnyError> {
+    let mut result = Vec::new();
+    for line in input.lines() {
+        result.push(Arrow::parse(line)?);
+    }
+    Ok(result)
 }
 
 fn _print_grid(counts: &HashMap<Point, u32>) {
@@ -124,44 +130,45 @@ fn _risk(arrows: Vec<Arrow>, include_diagonal: bool) -> u32 {
     counts.into_iter().filter(|(_, c)| 2 <= *c).count() as u32
 }
 
-pub fn part_1(input: &str) -> u32 {
-    let arrows = _arrows(input);
-    _risk(arrows, false)
+pub fn part_1(input: &str) -> Result<String, AnyError> {
+    let arrows = _arrows(input)?;
+    let risk = _risk(arrows, false);
+    Ok(format!("{}", risk))
 }
 
-pub fn part_2(input: &str) -> u32 {
-    let arrows = _arrows(input);
-    _risk(arrows, true)
+pub fn part_2(input: &str) -> Result<String, AnyError> {
+    let arrows = _arrows(input)?;
+    let risk = _risk(arrows, true);
+    Ok(format!("{}", risk))
 }
 
 fn _from_file<F, T>(func: F, stem: &str) -> T
 where
-    F: Fn(&str) -> T,
+    F: Fn(&str) -> Result<T, AnyError>,
 {
-    func(&fs::read_to_string(format!("inputs/05/{}.txt", stem)).unwrap())
+    func(&fs::read_to_string(format!("inputs/05/{}.txt", stem)).unwrap()).unwrap()
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), 5);
+        assert_eq!(_from_file(part_1, "example"), "5");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 6225);
+        assert_eq!(_from_file(part_1, "input"), "6225");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), 12);
+        assert_eq!(_from_file(part_2, "example"), "12");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), 22116);
+        assert_eq!(_from_file(part_2, "input"), "22116");
     }
 }
