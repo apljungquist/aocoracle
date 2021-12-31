@@ -83,14 +83,8 @@ pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
     let mut result = Vec::new();
     for ((day, part), func) in candidates.iter() {
         eprintln!("Trying day {} part {}", day, part);
-        let prefix = match (args.day, args.part) {
-            (None, None) => format!("Day {} part {}: ", day, part),
-            (None, Some(_)) => format!("Day {}: ", day),
-            (Some(_), None) => format!("Part {}: ", part),
-            (Some(_), Some(_)) => format!(""),
-        };
         match func(text) {
-            Ok(output) => result.push(format!("{}{}", prefix, output)),
+            Ok(output) => result.push(format!("{}", output)),
             Err(error) => match args.day {
                 None => eprintln!("{}", error),
                 Some(_) => return Err(error),
