@@ -1,5 +1,3 @@
-#![feature(iter_zip)]
-
 use std::collections::{BTreeMap, HashMap};
 
 use structopt::StructOpt;
@@ -84,7 +82,7 @@ pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
     for ((day, part), func) in candidates.iter() {
         eprintln!("Trying day {} part {}", day, part);
         match func(text) {
-            Ok(output) => result.push(format!("{}", output)),
+            Ok(output) => result.push(output),
             Err(error) => match args.day {
                 None => eprintln!("{}", error),
                 Some(_) => return Err(error),
