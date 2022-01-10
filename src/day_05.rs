@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
 use std::hash::Hash;
-use std::iter::zip;
 
 type AnyError = Box<dyn std::error::Error>;
 
@@ -55,11 +54,11 @@ impl Arrow {
         match (self.is_horizontal(), self.is_vertical()) {
             (false, false) => {
                 if include_diagonal {
-                    for (x, y) in zip(
-                        interpolated(self.tail.x, self.head.x),
-                        interpolated(self.tail.y, self.head.y),
-                    ) {
-                        result.push(Point { x, y })
+                    for (x, y) in interpolated(self.tail.x, self.head.x)
+                        .into_iter()
+                        .zip(interpolated(self.tail.y, self.head.y))
+                    {
+                        result.push(Point { x, y });
                     }
                 }
             }
