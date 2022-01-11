@@ -3,6 +3,8 @@ use std::io::Read;
 use structopt::StructOpt;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     let mut text = String::new();
     io::stdin().read_to_string(&mut text)?;
     let args = aoclib::Cli::from_args();

@@ -80,11 +80,11 @@ pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
 
     let mut result = Vec::new();
     for ((day, part), func) in candidates.iter() {
-        eprintln!("Trying day {} part {}", day, part);
+        log::debug!("Trying day {} part {}", day, part);
         match func(text) {
             Ok(output) => result.push(output),
             Err(error) => match args.day {
-                None => eprintln!("{}", error),
+                None => log::debug!("{}", error),
                 Some(_) => return Err(error),
             },
         }
