@@ -3,7 +3,7 @@
 It can answer any Advent of Code problem[^1] in an instant[^2]:
 
 ```bash
-echo '16,1,2,0,4,2,7,1,2,19\n' | aocoracle --part=1 2>/dev/null
+echo '16,1,2,0,4,2,7,1,2,19\n' | aocoracle --part=1
 42
 ```
 

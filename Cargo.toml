@@ -8,8 +8,10 @@ exclude = [".*","inputs/"]
 
 [dependencies]
 clap = "2.33.3"
+env_logger = "0.9.0"
 hashbrown = "0.11.2"
 itertools = "0.10.0"
+log = "0.4.14"
 regex = "1.4.5"
 structopt = "0.3.21"
 

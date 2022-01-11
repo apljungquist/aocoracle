@@ -111,7 +111,6 @@ pub fn part_1(input: &str) -> u64 {
     let n = 2;
     let img = _img(input);
     let lut = _lut(input);
-    println!("{:?}", lut);
     let enhanced = _multi_enhanced(&img, &lut, n);
     enhanced.values().map(|b| *b as u64).sum()
 }
@@ -120,7 +119,6 @@ pub fn part_2(input: &str) -> u64 {
     let n = 50;
     let img = _img(input);
     let lut = _lut(input);
-    println!("{:?}", lut);
     let enhanced = _multi_enhanced(&img, &lut, n);
     enhanced.values().map(|b| *b as u64).sum()
 }

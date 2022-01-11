@@ -391,7 +391,6 @@ pub fn part_2(input: &str) -> u64 {
     rooms[3] = _push(rooms[3], 0);
     rooms[3] = _push(rooms[3], tmp.1);
 
-    _print_all("Start", 0, rooms);
     _part_x(rooms)
 }
 
