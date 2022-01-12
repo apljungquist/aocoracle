@@ -1,6 +1,6 @@
 [package]
 name = "aocoracle"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Universal solver for advent of code problems"
 license = "MIT"
