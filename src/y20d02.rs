@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::fs;
 use std::str::FromStr;
 
@@ -34,7 +35,7 @@ impl Policy {
 }
 
 fn _passwords(text: &str) -> Result<Vec<(Policy, String)>, AnyError> {
-    let re = regex::Regex::new(r"^(\d+)-(\d+) (\w): (\w+)$").unwrap();
+    let re = regex::Regex::new(r"^(\d+)-(\d+) (\w): (\w+)$").expect("Hard coded regex is valid");
     let mut result = Vec::new();
     for line in text.lines() {
         let cap = re
@@ -42,9 +43,12 @@ fn _passwords(text: &str) -> Result<Vec<(Policy, String)>, AnyError> {
             .ok_or(format!("Could not capture a password on line {}", line))?;
         result.push((
             Policy {
-                lo: cap[1].parse::<usize>().unwrap(),
-                hi: cap[2].parse::<usize>().unwrap(),
-                ch: cap[3].chars().next().unwrap(),
+                lo: cap[1].parse::<usize>()?,
+                hi: cap[2].parse::<usize>()?,
+                ch: cap[3]
+                    .chars()
+                    .exactly_one()
+                    .expect("Hard coded regex captures exactly one char"),
             },
             cap[4].into(),
         ))
