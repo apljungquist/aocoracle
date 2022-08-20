@@ -17,6 +17,7 @@ pub mod day_23;
 pub mod day_24;
 pub mod day_25;
 mod y20d01;
+mod y20d02;
 
 #[derive(StructOpt)]
 pub struct Cli {
