@@ -24,6 +24,9 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     let numbers = _numbers(input);
     for x in numbers.iter() {
         for y in numbers.iter() {
+            if x + y >= 2020 {
+                continue;
+            }
             for z in numbers.iter() {
                 if x + y + z == 2020 {
                     return Ok(format!("{}", x * y * z));
