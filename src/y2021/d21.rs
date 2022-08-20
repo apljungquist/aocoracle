@@ -1,16 +1,17 @@
+use crate::AnyError;
 use hashbrown::HashMap;
-use std::fs;
 
-fn _starting_positions(input: &str) -> [u64; 2] {
+fn _starting_positions(input: &str) -> Result<[u64; 2], AnyError> {
     let re = regex::Regex::new(r"^Player (1|2) starting position: (\d+)$").unwrap();
     let mut result = [0; 2];
-    let positions: Vec<u64> = input
-        .lines()
-        .map(|line| re.captures(line).unwrap()[2].parse::<u64>().unwrap() - 1)
-        .collect();
+    let mut positions: Vec<u64> = Vec::new();
+    for line in input.lines() {
+        let cap = re.captures(line).ok_or("Regex does not match line")?;
+        positions.push(cap[2].parse::<u64>().unwrap() - 1);
+    }
     result[0] = positions[0];
     result[1] = positions[1];
-    result
+    Ok(result)
 }
 
 fn _quantum_die() -> HashMap<u64, u64> {
@@ -57,8 +58,8 @@ fn _quantum(
     result
 }
 
-pub fn part_1(input: &str) -> u64 {
-    let mut positions = _starting_positions(input);
+pub fn part_1(input: &str) -> Result<String, AnyError> {
+    let mut positions = _starting_positions(input)?;
     let mut scores = vec![0; 2];
     let mut i = 0;
     loop {
@@ -71,16 +72,16 @@ pub fn part_1(input: &str) -> u64 {
             positions[player] = (positions[player] + num_step) % 10;
             scores[player] += positions[player] + 1;
             if 1000 <= scores[player] {
-                return i * scores[(player + 1) % 2];
+                return Ok((i * scores[(player + 1) % 2]).to_string());
             }
         }
     }
 }
 
-pub fn part_2(input: &str) -> u64 {
-    let positions = _starting_positions(input);
+pub fn part_2(input: &str) -> Result<String, AnyError> {
+    let positions = _starting_positions(input)?;
     let mut cache = HashMap::new();
-    *_quantum(
+    Ok(_quantum(
         &mut cache,
         &_quantum_die(),
         positions[0],
@@ -91,36 +92,34 @@ pub fn part_2(input: &str) -> u64 {
     .iter()
     .max()
     .unwrap()
-}
-
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> T,
-{
-    func(&fs::read_to_string(format!("inputs/21/{}.txt", stem)).unwrap())
+    .to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), 739785);
+        assert_eq!(compute_answer(file!(), part_1, "example"), "739785");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 916083);
+        assert_eq!(compute_answer(file!(), part_1, "input"), "916083");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), 444356092776315);
+        assert_eq!(
+            compute_answer(file!(), part_2, "example"),
+            "444356092776315"
+        );
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), 49982165861983);
+        assert_eq!(compute_answer(file!(), part_2, "input"), "49982165861983");
     }
 }

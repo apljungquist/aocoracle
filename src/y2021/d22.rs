@@ -1,10 +1,9 @@
 use std::cmp;
 use std::fmt::Debug;
-use std::fs;
 
 use hashbrown::HashMap;
 
-type AnyError = Box<dyn std::error::Error>;
+use crate::AnyError;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 struct Cuboid {
@@ -81,6 +80,9 @@ fn _steps(text: &str) -> Result<Vec<(bool, Cuboid)>, AnyError> {
         .ok_or_else(|| format!("Not a valid cuboid: {:?}", cap))?;
         result.push((state, cuboid));
     }
+    if result.len() != text.lines().count() {
+        return Err("Expected one cuboid per line".into());
+    }
     Ok(result)
 }
 
@@ -128,44 +130,42 @@ pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     Ok(format!("{}", _num_on(steps)))
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, Box<dyn std::error::Error>>,
-{
-    func(&fs::read_to_string(format!("inputs/22/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::testing::compute_answer;
+
     use super::*;
 
     #[test]
     fn part_1_works_on_example_s() {
-        assert_eq!(_from_file(part_1, "example_s"), "39");
+        assert_eq!(compute_answer(file!(), part_1, "example_s"), "39");
     }
 
     #[test]
     fn part_1_works_on_example_m() {
-        assert_eq!(_from_file(part_1, "example_m"), "590784");
+        assert_eq!(compute_answer(file!(), part_1, "example_m"), "590784");
     }
 
     #[test]
     fn part_1_works_on_example_l() {
-        assert_eq!(_from_file(part_1, "example_l"), "474140");
+        assert_eq!(compute_answer(file!(), part_1, "example_l"), "474140");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "527915");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "527915");
     }
 
     #[test]
     fn part_2_works_on_example_l() {
-        assert_eq!(_from_file(part_2, "example_l"), "2758514936282235");
+        assert_eq!(
+            compute_answer(file!(), part_2, "example_l"),
+            "2758514936282235"
+        );
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "1218645427221987");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "1218645427221987");
     }
 }

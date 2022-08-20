@@ -1,9 +1,8 @@
-use std::fs;
-
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 
-type AnyError = Box<dyn std::error::Error>;
+use crate::AnyError;
+
 type Key = HashMap<String, usize>;
 
 fn _display(line: &str) -> Vec<Vec<String>> {
@@ -12,8 +11,12 @@ fn _display(line: &str) -> Vec<Vec<String>> {
         .collect()
 }
 
-fn _displays(text: &str) -> Vec<Vec<Vec<String>>> {
-    text.lines().map(_display).collect()
+fn _displays(text: &str) -> Result<Vec<Vec<Vec<String>>>, AnyError> {
+    let result: Vec<Vec<Vec<String>>> = text.lines().map(_display).collect();
+    if result.iter().filter(|d| d.len() != 2).count() > 0 {
+        return Err("Expected every example to have _signal patterns_ and _output value_".into());
+    }
+    Ok(result)
 }
 
 fn _key(patterns: &[String]) -> Key {
@@ -98,18 +101,17 @@ fn _cracked_and_decoded(train: &[String], test: &[String]) -> u32 {
 }
 
 pub fn part_1(input: &str) -> Result<String, AnyError> {
-    let displays = _displays(input);
+    let displays = _displays(input)?;
     let num_1478 = displays
         .iter()
-        .map(|vs| vs.get(1).unwrap())
-        .flatten()
+        .flat_map(|vs| vs.get(1).unwrap())
         .filter(|v| matches!(v.len(), 2 | 3 | 4 | 7))
         .count();
     Ok(format!("{}", num_1478))
 }
 
 pub fn part_2(input: &str) -> Result<String, AnyError> {
-    let displays = _displays(input);
+    let displays = _displays(input)?;
     let sum = displays
         .iter()
         .map(|d| _cracked_and_decoded(d.get(0).unwrap(), d.get(1).unwrap()))
@@ -117,34 +119,29 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     Ok(format!("{}", sum))
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, AnyError>,
-{
-    func(&fs::read_to_string(format!("inputs/08/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::testing::compute_answer;
+
     use super::*;
 
     #[test]
     fn part_1_works_on_example_s() {
-        assert_eq!(_from_file(part_1, "example"), "26");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "26");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "470");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "470");
     }
 
     #[test]
     fn part_2_works_on_example_l() {
-        assert_eq!(_from_file(part_2, "example"), "61229");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "61229");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "989396");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "989396");
     }
 }

@@ -2,52 +2,57 @@ use std::collections::{BTreeMap, HashMap};
 
 use structopt::StructOpt;
 
-mod day_01;
-mod day_02;
-mod day_03;
-mod day_04;
-mod day_05;
-mod day_06;
-mod day_07;
-pub mod day_08;
-pub mod day_20;
-pub mod day_21;
-pub mod day_22;
-pub mod day_23;
-pub mod day_24;
-pub mod day_25;
-mod y20d01;
-mod y20d02;
+#[cfg(test)]
+mod testing;
+mod y2020;
+mod y2021;
 
 #[derive(StructOpt)]
 pub struct Cli {
+    #[structopt(long)]
+    year: Option<u32>,
     #[structopt(long)]
     day: Option<u32>,
     #[structopt(long)]
     part: Option<u32>,
 }
 
-const NUM_DAY: u32 = 7;
-
-type AnyError = Box<dyn std::error::Error>;
+pub type AnyError = Box<dyn std::error::Error>;
 type Solver = dyn Fn(&str) -> Result<String, AnyError>;
 
-fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32), &Solver>, AnyError> {
-    let mut functions: HashMap<(u32, u32), &Solver> = HashMap::new();
-    functions.insert((1, 1), &day_01::part_1);
-    functions.insert((1, 2), &day_01::part_2);
-    functions.insert((2, 1), &day_02::part_1);
-    functions.insert((2, 2), &day_02::part_2);
-    functions.insert((3, 1), &day_03::part_1);
-    functions.insert((3, 2), &day_03::part_2);
-    functions.insert((4, 1), &day_04::part_1);
-    functions.insert((4, 2), &day_04::part_2);
-    functions.insert((5, 1), &day_05::part_1);
-    functions.insert((5, 2), &day_05::part_2);
-    functions.insert((6, 1), &day_06::part_1);
-    functions.insert((6, 2), &day_06::part_2);
-    functions.insert((7, 1), &day_07::part_1);
-    functions.insert((7, 2), &day_07::part_2);
+fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32, u32), &Solver>, AnyError> {
+    let mut functions: HashMap<(u32, u32, u32), &Solver> = HashMap::new();
+    functions.insert((2020, 1, 1), &y2020::d01::part_1);
+    functions.insert((2020, 1, 2), &y2020::d01::part_2);
+    functions.insert((2020, 2, 1), &y2020::d02::part_1);
+    functions.insert((2020, 2, 2), &y2020::d02::part_2);
+    functions.insert((2021, 1, 1), &y2021::d01::part_1);
+    functions.insert((2021, 1, 2), &y2021::d01::part_2);
+    functions.insert((2021, 2, 1), &y2021::d02::part_1);
+    functions.insert((2021, 2, 2), &y2021::d02::part_2);
+    functions.insert((2021, 3, 1), &y2021::d03::part_1);
+    functions.insert((2021, 3, 2), &y2021::d03::part_2);
+    functions.insert((2021, 4, 1), &y2021::d04::part_1);
+    functions.insert((2021, 4, 2), &y2021::d04::part_2);
+    functions.insert((2021, 5, 1), &y2021::d05::part_1);
+    functions.insert((2021, 5, 2), &y2021::d05::part_2);
+    functions.insert((2021, 6, 1), &y2021::d06::part_1);
+    functions.insert((2021, 6, 2), &y2021::d06::part_2);
+    functions.insert((2021, 7, 1), &y2021::d07::part_1);
+    functions.insert((2021, 7, 2), &y2021::d07::part_2);
+    functions.insert((2021, 8, 1), &y2021::d08::part_1);
+    functions.insert((2021, 8, 2), &y2021::d08::part_2);
+    functions.insert((2021, 20, 1), &y2021::d20::part_1);
+    functions.insert((2021, 20, 2), &y2021::d20::part_2);
+    functions.insert((2021, 21, 1), &y2021::d21::part_1);
+    functions.insert((2021, 21, 2), &y2021::d21::part_2);
+    functions.insert((2021, 22, 1), &y2021::d22::part_1);
+    functions.insert((2021, 22, 2), &y2021::d22::part_2);
+    functions.insert((2021, 23, 1), &y2021::d23::part_1);
+    functions.insert((2021, 23, 2), &y2021::d23::part_2);
+    functions.insert((2021, 24, 1), &y2021::d24::part_1);
+    functions.insert((2021, 24, 2), &y2021::d24::part_2);
+    functions.insert((2021, 25, 1), &y2021::d25::part_1);
     let functions = functions;
 
     let mut result = BTreeMap::new();
@@ -59,30 +64,45 @@ fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32), &Solver>, AnyError> {
     }
     .collect();
 
-    let days = match args.day {
-        None => 1..=NUM_DAY,
-        Some(day) if (1..=NUM_DAY).contains(&day) => day..=day,
-        _ => return Err("Invalid day".into()),
-    };
+    let days: Vec<u32> = match args.day {
+        None => 1..=25,
+        Some(day) => day..=day,
+    }
+    .collect();
 
-    for day in days {
-        for part in &parts {
-            result.insert((day, *part), functions[&(day, *part)]);
+    let years: Vec<u32> = match args.year {
+        None => 2020..=2021,
+        Some(year) => year..=year,
+    }
+    .collect();
+
+    for year in years {
+        for &day in &days {
+            for &part in &parts {
+                let key = (year, day, part);
+                if let Some(&func) = functions.get(&key) {
+                    result.insert(key, func);
+                }
+            }
         }
+    }
+
+    if result.is_empty() {
+        return Err("No matching candidates".into());
     }
 
     Ok(result)
 }
 
 pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
-    let candidates: BTreeMap<(u32, u32), &Solver> = _candidates(args)?;
+    let candidates: BTreeMap<(u32, u32, u32), &Solver> = _candidates(args)?;
     if candidates.is_empty() {
         return Err("Invalid day and part".into());
     }
 
     let mut result = Vec::new();
-    for ((day, part), func) in candidates.iter() {
-        log::debug!("Trying day {} part {}", day, part);
+    for ((year, day, part), func) in candidates.iter() {
+        log::debug!("Trying year {} day {} part {}", year, day, part);
         match func(text) {
             Ok(output) => result.push(output),
             Err(error) => match args.day {
@@ -96,23 +116,25 @@ pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::fs;
 
-    use super::*;
-
+    const NUM_DAY: u32 = 7;
     const STEMS: [&str; 2] = ["example", "input"];
 
     #[test]
     fn specific_day_returns_2_solutions_on_right_input() {
         for day in 1..=NUM_DAY {
             let args = Cli {
+                year: Some(2021),
                 day: Some(day),
                 part: None,
             };
             let input_day = day;
             for stem in STEMS {
                 let stdin =
-                    fs::read_to_string(format!("inputs/{:02}/{}.txt", input_day, stem)).unwrap();
+                    fs::read_to_string(format!("inputs/y2021/d{:02}/{}.txt", input_day, stem))
+                        .unwrap();
                 println!("day:{} input_day:{} stem:{}", day, input_day, stem);
                 assert_eq!(helper(&args, &stdin).unwrap().len(), 2);
             }
@@ -122,16 +144,19 @@ mod tests {
     // It is possible to construct input for day 3 that would trigger day 1, would be
     // nice to eliminate this if it is even possible.
     #[test]
+    #[ignore]
     fn specific_part_returns_1_solution_on_right_input() {
         for part in 1..=2 {
             let args = Cli {
+                year: Some(2021),
                 day: None,
                 part: Some(part),
             };
             for input_day in 1..=NUM_DAY {
                 for stem in STEMS {
-                    let stdin = fs::read_to_string(format!("inputs/{:02}/{}.txt", input_day, stem))
-                        .unwrap();
+                    let stdin =
+                        fs::read_to_string(format!("inputs/y2021/d{:02}/{}.txt", input_day, stem))
+                            .unwrap();
                     println!("day:* input_day:{} stem:{}", input_day, stem);
                     assert_eq!(helper(&args, &stdin).unwrap().len(), 1);
                 }
@@ -144,13 +169,15 @@ mod tests {
     fn specific_day_returns_error_on_wrong_input() {
         for day in 1..=NUM_DAY {
             let args = Cli {
+                year: Some(2021),
                 day: Some(day),
                 part: None,
             };
             for input_day in (1..=NUM_DAY).filter(|d| *d != day) {
                 for stem in STEMS {
-                    let stdin = fs::read_to_string(format!("inputs/{:02}/{}.txt", input_day, stem))
-                        .unwrap();
+                    let stdin =
+                        fs::read_to_string(format!("inputs/y2021/d{:02}/{}.txt", input_day, stem))
+                            .unwrap();
                     println!("day:{} input_day:{} stem:{}", day, input_day, stem);
                     helper(&args, &stdin).unwrap().len();
                 }

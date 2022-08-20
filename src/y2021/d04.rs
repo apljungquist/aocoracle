@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
-use std::fs;
 
-type AnyError = Box<dyn std::error::Error>;
+use crate::AnyError;
+
 type Board = HashMap<(bool, usize), HashSet<u32>>;
 
 fn _draws(input: &str) -> Result<Vec<u32>, AnyError> {
@@ -107,34 +107,28 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     panic!("Reached end of function without finding an answer");
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, AnyError>,
-{
-    func(&fs::read_to_string(format!("inputs/04/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), "4512");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "4512");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "22680");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "22680");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), "1924");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "1924");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "16168");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "16168");
     }
 }

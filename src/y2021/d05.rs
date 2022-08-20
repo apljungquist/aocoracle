@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use std::fs;
-use std::hash::Hash;
 
-type AnyError = Box<dyn std::error::Error>;
+use crate::AnyError;
+use std::hash::Hash;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 struct Point {
@@ -141,33 +140,28 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     Ok(format!("{}", risk))
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, AnyError>,
-{
-    func(&fs::read_to_string(format!("inputs/05/{}.txt", stem)).unwrap()).unwrap()
-}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), "5");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "5");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "6225");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "6225");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), "12");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "12");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "22116");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "22116");
     }
 }

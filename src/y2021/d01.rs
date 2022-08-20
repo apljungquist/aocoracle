@@ -1,4 +1,3 @@
-use std::fs;
 fn _depths(text: &str) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
     let mut result = Vec::new();
     for line in text.lines() {
@@ -32,34 +31,28 @@ pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     ))
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, Box<dyn std::error::Error>>,
-{
-    func(&fs::read_to_string(format!("inputs/01/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), "7");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "7");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "1139");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "1139");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), "5");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "5");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "1103");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "1103");
     }
 }

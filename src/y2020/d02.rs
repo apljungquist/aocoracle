@@ -1,8 +1,5 @@
+use crate::AnyError;
 use itertools::Itertools;
-use std::fs;
-use std::str::FromStr;
-
-type AnyError = Box<dyn std::error::Error>;
 
 struct Policy {
     lo: usize,
@@ -30,7 +27,7 @@ impl Policy {
         if a != self.ch && b != self.ch {
             return false;
         }
-        return true;
+        true
     }
 }
 
@@ -72,34 +69,28 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     Ok(format!("{}", num_valid))
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, AnyError>,
-{
-    func(&fs::read_to_string(format!("inputs/y20d02/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example_s() {
-        assert_eq!(_from_file(part_1, "example"), "2");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "2");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "383");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "383");
     }
 
     #[test]
     fn part_2_works_on_example_l() {
-        assert_eq!(_from_file(part_2, "example"), "1");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "1");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "272");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "272");
     }
 }

@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::collections::HashMap;
-use std::fs;
+
 use std::hash::Hash;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
@@ -88,34 +88,28 @@ pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     Ok(format!("{}", horizontal * vertical))
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, Box<dyn std::error::Error>>,
-{
-    func(&fs::read_to_string(format!("inputs/02/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), "150");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "150");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "2187380");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "2187380");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), "900");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "900");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "2086357770");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "2086357770");
     }
 }

@@ -1,11 +1,10 @@
-use std::fs;
-
+use crate::AnyError;
 use hashbrown::HashSet;
 use itertools::Itertools;
 
 type Herd = HashSet<(usize, usize)>;
 
-fn _herds(text: &str) -> (Herd, Herd) {
+fn _herds(text: &str) -> Result<(Herd, Herd), AnyError> {
     let mut east = HashSet::new();
     let mut south = HashSet::new();
     for (row, line) in text.lines().enumerate() {
@@ -18,11 +17,11 @@ fn _herds(text: &str) -> (Herd, Herd) {
                     south.insert((row, col));
                 }
                 '.' => (),
-                _ => panic!("Unexpected cell {}", cell),
+                _ => return Err(format!("Unexpected cell {}", cell).into()),
             }
         }
     }
-    (east, south)
+    Ok((east, south))
 }
 
 fn _fmt_herds(east: &Herd, south: &Herd, height: usize, width: usize) -> String {
@@ -97,29 +96,23 @@ fn _num_herds(east: Herd, south: Herd) -> usize {
     panic!("Oups")
 }
 
-pub fn part_1(input: &str) -> u64 {
-    let (east, south) = _herds(input);
-    _num_herds(east, south) as u64
-}
-
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> T,
-{
-    func(&fs::read_to_string(format!("inputs/25/{}.txt", stem)).unwrap())
+pub fn part_1(input: &str) -> Result<String, AnyError> {
+    let (east, south) = _herds(input)?;
+    Ok(_num_herds(east, south).to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), 58);
+        assert_eq!(compute_answer(file!(), part_1, "example"), "58");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 516);
+        assert_eq!(compute_answer(file!(), part_1, "input"), "516");
     }
 }

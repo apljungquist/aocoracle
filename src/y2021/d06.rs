@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use std::fs;
-type AnyError = Box<dyn std::error::Error>;
+
+use crate::AnyError;
+
 type Census = HashMap<u32, u64>;
 fn _census(line: &str) -> Result<Census, AnyError> {
     let mut result = HashMap::new();
@@ -56,34 +57,28 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     Ok(format!("{}", num_fish))
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, AnyError>,
-{
-    func(&fs::read_to_string(format!("inputs/06/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), "5934");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "5934");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "372300");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "372300");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), "26984457539");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "26984457539");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "1675781200288");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "1675781200288");
     }
 }

@@ -1,4 +1,4 @@
-use std::fs;
+use crate::AnyError;
 
 struct Subroutine {
     should_pop: bool,
@@ -9,12 +9,20 @@ struct Subroutine {
 const RADIX: u32 = 26;
 
 impl Subroutine {
-    fn from_lines(lines: &[&str]) -> Subroutine {
-        Subroutine {
-            should_pop: match lines[4].split_whitespace().nth(2).unwrap().parse().unwrap() {
-                1 => false,
-                RADIX => true,
-                _ => panic!("Unexpected value for b"),
+    fn from_lines(lines: &[&str]) -> Result<Subroutine, AnyError> {
+        if lines.len() < 16 {
+            return Err("Too few lines for a valid input".into());
+        }
+        Ok(Subroutine {
+            should_pop: match lines[4]
+                .split_whitespace()
+                .nth(2)
+                .map(|t| t.parse())
+                .ok_or("Could not parse instruction")?
+            {
+                Ok(1) => false,
+                Ok(RADIX) => true,
+                _ => return Err("Unexpected value for b".into()),
             },
             gate_offset: lines[5].split_whitespace().nth(2).unwrap().parse().unwrap(),
             source_offset: lines[15]
@@ -23,7 +31,7 @@ impl Subroutine {
                 .unwrap()
                 .parse()
                 .unwrap(),
-        }
+        })
     }
 
     fn evaluate(&self, w: i64, z: i64) -> (i8, i64) {
@@ -38,12 +46,12 @@ impl Subroutine {
     }
 }
 
-fn _subroutines(text: &str) -> Vec<Subroutine> {
-    text.lines()
-        .collect::<Vec<&str>>()
-        .chunks(18)
-        .map(Subroutine::from_lines)
-        .collect()
+fn _subroutines(text: &str) -> Result<Vec<Subroutine>, AnyError> {
+    let mut result = Vec::new();
+    for chunk in text.lines().collect::<Vec<&str>>().chunks(18) {
+        result.push(Subroutine::from_lines(chunk)?);
+    }
+    Ok(result)
 }
 
 fn _fmt_int(mut value: u64, radix: u32) -> String {
@@ -77,34 +85,36 @@ fn _first_valid(subroutines: &[Subroutine], old_z: i64, path: u64, digits: &[u64
     None
 }
 
-pub fn part_1(input: &str) -> u64 {
-    let subroutines = _subroutines(input);
-    _first_valid(&subroutines[..], 0, 0, &[9, 8, 7, 6, 5, 4, 3, 2, 1][..]).unwrap()
+pub fn part_1(input: &str) -> Result<String, AnyError> {
+    let subroutines = _subroutines(input)?;
+    Ok(
+        _first_valid(&subroutines[..], 0, 0, &[9, 8, 7, 6, 5, 4, 3, 2, 1][..])
+            .unwrap()
+            .to_string(),
+    )
 }
 
-pub fn part_2(input: &str) -> u64 {
-    let subroutines = _subroutines(input);
-    _first_valid(&subroutines[..], 0, 0, &[1, 2, 3, 4, 5, 6, 7, 8, 9][..]).unwrap()
-}
-
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> T,
-{
-    func(&fs::read_to_string(format!("inputs/24/{}.txt", stem)).unwrap())
+pub fn part_2(input: &str) -> Result<String, AnyError> {
+    let subroutines = _subroutines(input)?;
+    Ok(
+        _first_valid(&subroutines[..], 0, 0, &[1, 2, 3, 4, 5, 6, 7, 8, 9][..])
+            .unwrap()
+            .to_string(),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 41299994879959);
+        assert_eq!(compute_answer(file!(), part_1, "input"), "41299994879959");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), 11189561113216);
+        assert_eq!(compute_answer(file!(), part_2, "input"), "11189561113216");
     }
 }

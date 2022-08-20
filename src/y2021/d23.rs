@@ -1,5 +1,4 @@
-use std::fs;
-
+use crate::AnyError;
 use hashbrown::HashMap;
 
 type Tile = u64;
@@ -61,7 +60,7 @@ fn _fmt(vs: u64, len: u64) -> String {
         .collect()
 }
 
-fn _rooms(input: &str) -> Rooms {
+fn _rooms(input: &str) -> Result<Rooms, AnyError> {
     let mut lines = input.lines();
     lines.next();
     lines.next();
@@ -80,12 +79,12 @@ fn _rooms(input: &str) -> Rooms {
                     'B' => 1,
                     'C' => 2,
                     'D' => 3,
-                    _ => panic!("Unexpected occupant '{}'", occupant),
+                    _ => return Err(format!("Unexpected occupant '{}'", occupant).into()),
                 },
             );
         }
     }
-    result
+    Ok(result)
 }
 
 const TILES: [Tile; 7] = [0, 1, 3, 5, 7, 9, 10];
@@ -355,22 +354,24 @@ fn _penalty(rooms: Rooms) -> u64 {
         .sum()
 }
 
-fn _part_x(rooms: Rooms) -> u64 {
+fn _part_x(rooms: Rooms) -> Option<u64> {
     let paths = _paths();
     let mut cache = HashMap::new();
-    let from_hallway =
-        _min_cost_from_hallway(&mut cache, &paths, 0, rooms, 0, std::u64::MAX).unwrap();
+    let from_hallway = _min_cost_from_hallway(&mut cache, &paths, 0, rooms, 0, std::u64::MAX)?;
     let from_rooms = _penalty(rooms);
-    from_hallway + from_rooms
+    Some(from_hallway + from_rooms)
 }
 
-pub fn part_1(input: &str) -> u64 {
-    let rooms = _rooms(input);
-    _part_x(rooms)
+pub fn part_1(input: &str) -> Result<String, AnyError> {
+    let rooms = _rooms(input)?;
+    if let Some(answer) = _part_x(rooms) {
+        return Ok(answer.to_string());
+    }
+    Err("No answer".into())
 }
 
-pub fn part_2(input: &str) -> u64 {
-    let mut rooms = _rooms(input);
+pub fn part_2(input: &str) -> Result<String, AnyError> {
+    let mut rooms = _rooms(input)?;
     let mut tmp = _pop(rooms[0]);
     rooms[0] = _push(tmp.0, 3);
     rooms[0] = _push(rooms[0], 3);
@@ -391,48 +392,45 @@ pub fn part_2(input: &str) -> u64 {
     rooms[3] = _push(rooms[3], 0);
     rooms[3] = _push(rooms[3], tmp.1);
 
-    _part_x(rooms)
-}
-
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> T,
-{
-    func(&fs::read_to_string(format!("inputs/23/{}.txt", stem)).unwrap())
+    if let Some(answer) = _part_x(rooms) {
+        return Ok(answer.to_string());
+    }
+    Err("No answer".into())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), 12521);
+        assert_eq!(compute_answer(file!(), part_1, "example"), "12521");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), 14510);
+        assert_eq!(compute_answer(file!(), part_1, "input"), "14510");
     }
 
     #[test]
     fn part_1_works_on_input_1() {
-        assert_eq!(_from_file(part_1, "input_1"), 11332);
+        assert_eq!(compute_answer(file!(), part_1, "input_1"), "11332");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), 44169);
+        assert_eq!(compute_answer(file!(), part_2, "example"), "44169");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), 49180);
+        assert_eq!(compute_answer(file!(), part_2, "input"), "49180");
     }
 
     #[test]
     fn part_2_works_on_input_1() {
-        assert_eq!(_from_file(part_2, "input_1"), 49936);
+        assert_eq!(compute_answer(file!(), part_2, "input_1"), "49936");
     }
 
     #[test]

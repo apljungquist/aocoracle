@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
-use std::fs;
+
+use crate::AnyError;
 use std::hash::Hash;
-type AnyError = Box<dyn std::error::Error>;
 
 fn _rows(text: &str) -> Result<Vec<Vec<bool>>, AnyError> {
     let mut result = Vec::new();
@@ -148,43 +148,38 @@ fn _carbon_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
     let cols = _transposed(_rows(input)?);
     Ok(_carbon(&cols))
 }
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, Box<dyn std::error::Error>>,
-{
-    func(&fs::read_to_string(format!("inputs/03/{}.txt", stem)).unwrap()).unwrap()
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(_from_file(part_1, "example"), "198");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "198");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "input"), "2954600");
+        assert_eq!(compute_answer(file!(), part_1, "input"), "2954600");
     }
 
     #[test]
     fn oxygen_works_on_example() {
-        assert_eq!(_from_file(_oxygen_only, "example"), 23);
+        assert_eq!(compute_answer(file!(), _oxygen_only, "example"), 23);
     }
     #[test]
     fn carbon_works_on_example() {
-        assert_eq!(_from_file(_carbon_only, "example"), 10);
+        assert_eq!(compute_answer(file!(), _carbon_only, "example"), 10);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(_from_file(part_2, "example"), "230");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "230");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "input"), "1662846");
+        assert_eq!(compute_answer(file!(), part_2, "input"), "1662846");
     }
 }
