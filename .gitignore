@@ -1,4 +1,6 @@
 /data/questions/
-/.idea
-/target
-/venv
+/dist/
+/docs/
+/.idea/
+/target/
+/venv/

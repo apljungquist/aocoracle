@@ -24,7 +24,7 @@ class Session:
     def __init__(
         self,
         session: str,
-        cache_location: pathlib.Path = pathlib.Path(__file__).parents[1] / "data",
+        cache_location: pathlib.Path = pathlib.Path(__file__).parents[1] / "../../data",
     ) -> None:
         self._cookie = session
         self._answers = {}

@@ -27,4 +27,4 @@ jobs:
       - name: Check tests
         run: cargo test --verbose
       - name: Check publish
-        run: cargo publish --dry-run --allow-dirty
+        run: cargo publish --dry-run --allow-dirty --package aocoracle

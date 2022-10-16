@@ -40,8 +40,38 @@ fix_format:
 	black bin/*.py
 	cargo fmt
 
+.PHONY: serve-dev
+
+serve-dev: crates/webapp/index.html
+	mkdir -p dist/debug/
+	trunk serve \
+		--dist dist/debug/ \
+		$<
+
+serve-rel: dist/release/index.html
+	cd $(<D) \
+	&& python -m http.server 8000
+
+
 # Nouns
 # =====
 
 constraints.txt: requirements.txt
 	pip-compile --allow-unsafe --no-header --output-file $@ $^
+
+dist/release/index.html: crates/webapp/index.html
+	rm -r $(@D)||:
+	mkdir -p $(@D)
+	trunk build \
+		--dist $(@D) \
+		--release \
+		$<
+
+docs/index.html: crates/webapp/index.html
+	rm -r $(@D)||:
+	mkdir -p $(@D)
+	trunk build \
+		--dist $(@D) \
+		--public-url aocoracle \
+		--release \
+		$<
