@@ -1,3 +1,4 @@
+use hashbrown::HashSet;
 use std::fs;
 
 type AnyError = Box<dyn std::error::Error>;
@@ -20,7 +21,19 @@ pub fn part_1(input: &str) -> Result<String, AnyError> {
 }
 
 pub fn part_2(input: &str) -> Result<String, AnyError> {
-    unimplemented!()
+    let mut seen = HashSet::new();
+
+    let mut frequency = 0;
+    for delta in _changes(input)?.into_iter().cycle() {
+        seen.insert(frequency);
+        frequency += delta;
+        if seen.contains(&frequency) {
+            return Ok(format!("{}", frequency));
+        }
+    }
+    unreachable!(
+        "cycle should create an infinite loop and that loop is broken only by the return statement"
+    )
 }
 
 fn _from_file<F, T>(func: F, stem: &str) -> T
@@ -46,11 +59,11 @@ mod tests {
 
     #[test]
     fn part_2_works_on_example_l() {
-        assert_eq!(_from_file(part_2, "example"), "1");
+        assert_eq!(_from_file(part_2, "example"), "2");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "6bb0c0bd67"), "272");
+        assert_eq!(_from_file(part_2, "6bb0c0bd67"), "71961");
     }
 }
