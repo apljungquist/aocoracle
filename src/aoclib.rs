@@ -4,6 +4,7 @@ use structopt::StructOpt;
 
 #[cfg(test)]
 mod testing;
+mod y2018;
 mod y2020;
 mod y2021;
 
@@ -22,6 +23,8 @@ type Solver = dyn Fn(&str) -> Result<String, AnyError>;
 
 fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32, u32), &Solver>, AnyError> {
     let mut functions: HashMap<(u32, u32, u32), &Solver> = HashMap::new();
+    functions.insert((2018, 1, 1), &y2018::d01::part_1);
+    functions.insert((2018, 1, 2), &y2018::d01::part_2);
     functions.insert((2020, 1, 1), &y2020::d01::part_1);
     functions.insert((2020, 1, 2), &y2020::d01::part_2);
     functions.insert((2020, 2, 1), &y2020::d02::part_1);
