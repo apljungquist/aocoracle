@@ -144,29 +144,6 @@ mod tests {
         }
     }
 
-    // It is possible to construct input for day 3 that would trigger day 1, would be
-    // nice to eliminate this if it is even possible.
-    #[test]
-    #[ignore]
-    fn specific_part_returns_1_solution_on_right_input() {
-        for part in 1..=2 {
-            let args = Cli {
-                year: Some(2021),
-                day: None,
-                part: Some(part),
-            };
-            for input_day in 1..=NUM_DAY {
-                for stem in STEMS {
-                    let stdin =
-                        fs::read_to_string(format!("inputs/y2021/d{:02}/{}.txt", input_day, stem))
-                            .unwrap();
-                    println!("day:* input_day:{} stem:{}", input_day, stem);
-                    assert_eq!(helper(&args, &stdin).unwrap().len(), 1);
-                }
-            }
-        }
-    }
-
     #[test]
     #[ignore]
     fn specific_day_returns_error_on_wrong_input() {

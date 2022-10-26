@@ -1,9 +1,7 @@
+use crate::AnyError;
 use hashbrown::HashSet;
-use std::fs;
 
-type AnyError = Box<dyn std::error::Error>;
-
-fn _changes(text: &str) -> Result<Vec<(i32)>, AnyError> {
+fn _changes(text: &str) -> Result<Vec<i32>, AnyError> {
     let re = regex::Regex::new(r"^([-+]\d+)$").expect("Hard coded regex is valid");
     let mut result = Vec::new();
     for line in text.lines() {
@@ -36,34 +34,28 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     )
 }
 
-fn _from_file<F, T>(func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> Result<T, AnyError>,
-{
-    func(&fs::read_to_string(format!("inputs/y2018/d01/{}.txt", stem)).unwrap()).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::compute_answer;
 
     #[test]
     fn part_1_works_on_example_s() {
-        assert_eq!(_from_file(part_1, "example"), "3");
+        assert_eq!(compute_answer(file!(), part_1, "example"), "3");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(_from_file(part_1, "6bb0c0bd67"), "502");
+        assert_eq!(compute_answer(file!(), part_1, "6bb0c0bd67"), "502");
     }
 
     #[test]
     fn part_2_works_on_example_l() {
-        assert_eq!(_from_file(part_2, "example"), "2");
+        assert_eq!(compute_answer(file!(), part_2, "example"), "2");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(_from_file(part_2, "6bb0c0bd67"), "71961");
+        assert_eq!(compute_answer(file!(), part_2, "6bb0c0bd67"), "71961");
     }
 }
