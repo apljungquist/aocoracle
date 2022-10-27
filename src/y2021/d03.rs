@@ -152,34 +152,45 @@ fn _carbon_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::compute_answer;
-
-    #[test]
-    fn part_1_works_on_example() {
-        assert_eq!(compute_answer(file!(), part_1, "example"), "198");
+    use crate::testing::{actual_answer, expected_answer};
+    fn assert_correct_answer(part: u8, stem: &str) {
+        assert_eq!(
+            actual_answer(
+                file!(),
+                match part {
+                    1 => part_1,
+                    2 => part_2,
+                    _ => panic!(),
+                },
+                stem
+            ),
+            expected_answer(file!(), part, stem).unwrap(),
+        )
     }
 
     #[test]
+    fn part_1_works_on_example() {
+        assert_correct_answer(1, "example");
+    }
+    #[test]
     fn part_1_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_1, "input"), "2954600");
+        assert_correct_answer(1, "6bb0c0bd67");
+    }
+    #[test]
+    fn part_2_works_on_example() {
+        assert_correct_answer(2, "example");
+    }
+    #[test]
+    fn part_2_works_on_input() {
+        assert_correct_answer(2, "6bb0c0bd67");
     }
 
     #[test]
     fn oxygen_works_on_example() {
-        assert_eq!(compute_answer(file!(), _oxygen_only, "example"), 23);
+        assert_eq!(actual_answer(file!(), _oxygen_only, "example"), 23);
     }
     #[test]
     fn carbon_works_on_example() {
-        assert_eq!(compute_answer(file!(), _carbon_only, "example"), 10);
-    }
-
-    #[test]
-    fn part_2_works_on_example() {
-        assert_eq!(compute_answer(file!(), part_2, "example"), "230");
-    }
-
-    #[test]
-    fn part_2_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_2, "input"), "1662846");
+        assert_eq!(actual_answer(file!(), _carbon_only, "example"), 10);
     }
 }

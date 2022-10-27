@@ -39,26 +39,39 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testing::compute_answer;
+    use crate::testing::{actual_answer, expected_answer};
 
-    #[test]
-    fn part_1_works_on_example_s() {
-        assert_eq!(compute_answer(file!(), part_1, "example"), "514579");
+    use super::*;
+
+    fn assert_correct_answer(part: u8, stem: &str) {
+        assert_eq!(
+            actual_answer(
+                file!(),
+                match part {
+                    1 => part_1,
+                    2 => part_2,
+                    _ => panic!(),
+                },
+                stem
+            ),
+            expected_answer(file!(), part, stem).unwrap(),
+        )
     }
 
+    #[test]
+    fn part_1_works_on_example() {
+        assert_correct_answer(1, "example");
+    }
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_1, "input"), "355875");
+        assert_correct_answer(1, "6bb0c0bd67");
     }
-
     #[test]
-    fn part_2_works_on_example_l() {
-        assert_eq!(compute_answer(file!(), part_2, "example"), "241861950");
+    fn part_2_works_on_example() {
+        assert_correct_answer(2, "example");
     }
-
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_2, "input"), "140379120");
+        assert_correct_answer(2, "6bb0c0bd67");
     }
 }

@@ -18,6 +18,16 @@ pub struct Cli {
     part: Option<u32>,
 }
 
+impl Cli {
+    pub fn default() -> Self {
+        Self {
+            year: None,
+            day: None,
+            part: None,
+        }
+    }
+}
+
 pub type AnyError = Box<dyn std::error::Error>;
 type Solver = dyn Fn(&str) -> Result<String, AnyError>;
 
@@ -74,7 +84,7 @@ fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32, u32), &Solver>, AnyErro
     .collect();
 
     let years: Vec<u32> = match args.year {
-        None => 2020..=2021,
+        None => 2018..=2021,
         Some(year) => year..=year,
     }
     .collect();
@@ -120,28 +130,22 @@ pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::{available_answers, expected_answer2, read_input};
     use std::fs;
 
     const NUM_DAY: u32 = 7;
     const STEMS: [&str; 2] = ["example", "input"];
 
     #[test]
-    fn specific_day_returns_2_solutions_on_right_input() {
-        for day in 1..=NUM_DAY {
-            let args = Cli {
-                year: Some(2021),
-                day: Some(day),
-                part: None,
-            };
-            let input_day = day;
-            for stem in STEMS {
-                let stdin =
-                    fs::read_to_string(format!("inputs/y2021/d{:02}/{}.txt", input_day, stem))
-                        .unwrap();
-                println!("day:{} input_day:{} stem:{}", day, input_day, stem);
-                assert_eq!(helper(&args, &stdin).unwrap().len(), 2);
-            }
+    fn expected_answer_among_actual_answers() -> Result<(), AnyError> {
+        let args = Cli::default();
+        for (year, day, part, stem) in available_answers() {
+            println!("y{} d{} p{} {}", year, day, part, stem);
+            let actual_answers = helper(&args, &read_input(year, day, &stem))?;
+            let expected_answer = expected_answer2(year, day, part, &stem).unwrap();
+            assert!(actual_answers.contains(&expected_answer));
         }
+        Ok(())
     }
 
     #[test]

@@ -132,40 +132,40 @@ pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::testing::compute_answer;
+    use crate::testing::actual_answer;
 
     use super::*;
 
     #[test]
     fn part_1_works_on_example_s() {
-        assert_eq!(compute_answer(file!(), part_1, "example_s"), "39");
+        assert_eq!(actual_answer(file!(), part_1, "example_s"), "39");
     }
 
     #[test]
     fn part_1_works_on_example_m() {
-        assert_eq!(compute_answer(file!(), part_1, "example_m"), "590784");
+        assert_eq!(actual_answer(file!(), part_1, "example_m"), "590784");
     }
 
     #[test]
     fn part_1_works_on_example_l() {
-        assert_eq!(compute_answer(file!(), part_1, "example_l"), "474140");
+        assert_eq!(actual_answer(file!(), part_1, "example_l"), "474140");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_1, "input"), "527915");
+        assert_eq!(actual_answer(file!(), part_1, "input"), "527915");
     }
 
     #[test]
     fn part_2_works_on_example_l() {
         assert_eq!(
-            compute_answer(file!(), part_2, "example_l"),
+            actual_answer(file!(), part_2, "example_l"),
             "2758514936282235"
         );
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_2, "input"), "1218645427221987");
+        assert_eq!(actual_answer(file!(), part_2, "input"), "1218645427221987");
     }
 }

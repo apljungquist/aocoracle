@@ -72,25 +72,25 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::compute_answer;
+    use crate::testing::actual_answer;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(compute_answer(file!(), part_1, "example"), "37");
+        assert_eq!(actual_answer(file!(), part_1, "example"), "37");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_1, "input"), "342641");
+        assert_eq!(actual_answer(file!(), part_1, "input"), "342641");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(compute_answer(file!(), part_2, "example"), "168");
+        assert_eq!(actual_answer(file!(), part_2, "example"), "168");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(compute_answer(file!(), part_2, "input"), "93006301");
+        assert_eq!(actual_answer(file!(), part_2, "input"), "93006301");
     }
 }
