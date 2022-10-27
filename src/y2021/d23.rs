@@ -410,12 +410,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(actual_answer(file!(), part_1, "input"), "14510");
-    }
-
-    #[test]
-    fn part_1_works_on_input_1() {
-        assert_eq!(actual_answer(file!(), part_1, "input_1"), "11332");
+        assert_eq!(actual_answer(file!(), part_1, "6bb0c0bd67"), "14510");
     }
 
     #[test]
@@ -425,12 +420,7 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(actual_answer(file!(), part_2, "input"), "49180");
-    }
-
-    #[test]
-    fn part_2_works_on_input_1() {
-        assert_eq!(actual_answer(file!(), part_2, "input_1"), "49936");
+        assert_eq!(actual_answer(file!(), part_2, "6bb0c0bd67"), "49180");
     }
 
     #[test]

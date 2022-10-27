@@ -13,7 +13,7 @@ fn _year_day(file: &str) -> (u16, u8) {
 }
 
 pub fn read_input(year: u16, day: u8, stem: &str) -> String {
-    fs::read_to_string(format!("inputs/y{:04}/d{:02}/{}.txt", year, day, stem)).unwrap()
+    fs::read_to_string(format!("data/inputs/{:04}/{:02}/{}.txt", year, day, stem)).unwrap()
 }
 
 pub fn actual_answer<F, T>(file: &str, func: F, stem: &str) -> T
@@ -25,7 +25,7 @@ where
 }
 
 fn read_answers() -> Answers {
-    let text = &fs::read_to_string("answers.json").unwrap();
+    let text = &fs::read_to_string("data/answers.json").unwrap();
     serde_json::from_str(text).unwrap()
 }
 

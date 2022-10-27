@@ -137,6 +137,7 @@ mod tests {
     const STEMS: [&str; 2] = ["example", "input"];
 
     #[test]
+    #[ignore]
     fn expected_answer_among_actual_answers() -> Result<(), AnyError> {
         let args = Cli::default();
         for (year, day, part, stem) in available_answers() {

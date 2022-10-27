@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(actual_answer(file!(), part_1, "input"), "527915");
+        assert_eq!(actual_answer(file!(), part_1, "6bb0c0bd67"), "527915");
     }
 
     #[test]
@@ -166,6 +166,9 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(actual_answer(file!(), part_2, "input"), "1218645427221987");
+        assert_eq!(
+            actual_answer(file!(), part_2, "6bb0c0bd67"),
+            "1218645427221987"
+        );
     }
 }

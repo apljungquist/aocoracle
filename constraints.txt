@@ -1,0 +1,44 @@
+black==21.12b0
+    # via -r requirements.txt
+certifi==2022.9.24
+    # via requests
+charset-normalizer==2.1.1
+    # via requests
+click==8.0.3
+    # via black
+fire==0.4.0
+    # via -r requirements.txt
+idna==3.4
+    # via requests
+isort==5.10.1
+    # via -r requirements.txt
+more-itertools==8.12.0
+    # via sprig
+mypy-extensions==0.4.3
+    # via black
+pathspec==0.9.0
+    # via black
+platformdirs==2.4.0
+    # via black
+requests==2.28.1
+    # via -r requirements.txt
+six==1.16.0
+    # via fire
+sprig==0.5.1
+    # via -r requirements.txt
+termcolor==1.1.0
+    # via fire
+tomli==1.2.2
+    # via black
+typing-extensions==4.0.1
+    # via
+    #   black
+    #   sprig
+urllib3==1.26.12
+    # via requests
+
+# The following packages are considered to be unsafe in a requirements file:
+pip==22.3
+    # via -r requirements.txt
+setuptools==65.5.0
+    # via -r requirements.txt

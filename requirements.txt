@@ -1,0 +1,7 @@
+black
+isort
+fire
+pip
+requests
+setuptools
+sprig
