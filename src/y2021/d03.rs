@@ -144,6 +144,7 @@ fn _oxygen_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
     let cols = _transposed(_rows(input)?);
     Ok(_oxygen(&cols))
 }
+
 fn _carbon_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
     let cols = _transposed(_rows(input)?);
     Ok(_carbon(&cols))
@@ -152,7 +153,8 @@ fn _carbon_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::{actual_answer, expected_answer};
+    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input, expected_answer};
+
     fn assert_correct_answer(part: u8, stem: &str) {
         assert_eq!(
             actual_answer(
@@ -162,7 +164,7 @@ mod tests {
                     2 => part_2,
                     _ => panic!(),
                 },
-                stem
+                stem,
             ),
             expected_answer(file!(), part, stem).unwrap(),
         )
@@ -172,14 +174,17 @@ mod tests {
     fn part_1_works_on_example() {
         assert_correct_answer(1, "example");
     }
+
     #[test]
     fn part_1_works_on_input() {
         assert_correct_answer(1, "6bb0c0bd67");
     }
+
     #[test]
     fn part_2_works_on_example() {
         assert_correct_answer(2, "example");
     }
+
     #[test]
     fn part_2_works_on_input() {
         assert_correct_answer(2, "6bb0c0bd67");
@@ -189,8 +194,15 @@ mod tests {
     fn oxygen_works_on_example() {
         assert_eq!(actual_answer(file!(), _oxygen_only, "example"), 23);
     }
+
     #[test]
     fn carbon_works_on_example() {
         assert_eq!(actual_answer(file!(), _carbon_only, "example"), 10);
+    }
+
+    #[ignore]
+    #[test]
+    fn returns_error_on_wrong_input() {
+        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
     }
 }

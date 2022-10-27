@@ -1,4 +1,4 @@
-use crate::AnyError;
+use crate::{AnyError, Solver};
 use glob::glob;
 use std::collections::BTreeMap;
 use std::fs;
@@ -83,4 +83,16 @@ pub fn available_answers() -> Vec<(u16, u8, u8, String)> {
         }
     }
     result
+}
+
+pub fn assert_returns_error_on_wrong_input(file: &str, part_1: &Solver, part_2: &Solver) {
+    let (skip_year, skip_day) = _year_day(file);
+    for (year, day, stem) in available_inputs() {
+        if year == skip_year && day == skip_day {
+            continue;
+        }
+        println!("y{} d{} {}", year, day, stem);
+        assert!(part_1(&read_input(year, day, &stem)).is_err());
+        assert!(part_2(&read_input(year, day, &stem)).is_err());
+    }
 }

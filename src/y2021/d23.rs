@@ -401,7 +401,7 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::actual_answer;
+    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input};
 
     #[test]
     fn part_1_works_on_example() {
@@ -421,6 +421,12 @@ mod tests {
     #[test]
     fn part_2_works_on_input() {
         assert_eq!(actual_answer(file!(), part_2, "6bb0c0bd67"), "49180");
+    }
+
+    #[ignore]
+    #[test]
+    fn returns_error_on_wrong_input() {
+        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
     }
 
     #[test]

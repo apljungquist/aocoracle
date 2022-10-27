@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::AnyError;
 
 type Census = HashMap<u32, u64>;
+
 fn _census(line: &str) -> Result<Census, AnyError> {
     let mut result = HashMap::new();
     for countdown in line.trim_end().split(',') {
@@ -60,7 +61,7 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::actual_answer;
+    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input};
 
     #[test]
     fn part_1_works_on_example() {
@@ -83,5 +84,10 @@ mod tests {
             actual_answer(file!(), part_2, "6bb0c0bd67"),
             "1675781200288"
         );
+    }
+
+    #[test]
+    fn returns_error_on_wrong_input() {
+        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
     }
 }

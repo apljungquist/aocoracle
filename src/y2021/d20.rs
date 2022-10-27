@@ -28,6 +28,7 @@ fn _pixel(ch: char) -> Result<bool, AnyError> {
         _ => Err(format!("Unexpected char '{}'", ch).into()),
     }
 }
+
 fn _img(text: &str) -> Result<Img, AnyError> {
     let mut result = HashMap::new();
     let mut lines = text.lines();
@@ -51,6 +52,7 @@ fn _lut(text: &str) -> Result<HashMap<Key, bool>, AnyError> {
     }
     Ok(result)
 }
+
 fn _once_enhanced(img: &Img, lut: &Lut, padding: bool, min: i32, max: i32) -> Img {
     let mut result = HashMap::with_capacity((max - min + 3).pow(2) as usize);
     for r in min - 1..=max + 1 {
@@ -135,7 +137,7 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::actual_answer;
+    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input};
 
     #[test]
     fn part_1_works_on_example() {
@@ -155,5 +157,11 @@ mod tests {
     #[test]
     fn part_2_works_on_input() {
         assert_eq!(actual_answer(file!(), part_2, "6bb0c0bd67"), "17965");
+    }
+
+    #[ignore]
+    #[test]
+    fn returns_error_on_wrong_input() {
+        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
     }
 }

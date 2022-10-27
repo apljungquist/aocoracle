@@ -90,7 +90,7 @@ pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::testing::{actual_answer, expected_answer};
+    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input, expected_answer};
 
     use super::*;
 
@@ -103,7 +103,7 @@ mod tests {
                     2 => part_2,
                     _ => panic!(),
                 },
-                stem
+                stem,
             ),
             expected_answer(file!(), part, stem).unwrap(),
         )
@@ -113,16 +113,24 @@ mod tests {
     fn part_1_works_on_example() {
         assert_correct_answer(1, "example");
     }
+
     #[test]
     fn part_1_works_on_input() {
         assert_correct_answer(1, "6bb0c0bd67");
     }
+
     #[test]
     fn part_2_works_on_example() {
         assert_correct_answer(2, "example");
     }
+
     #[test]
     fn part_2_works_on_input() {
         assert_correct_answer(2, "6bb0c0bd67");
+    }
+
+    #[test]
+    fn returns_error_on_wrong_input() {
+        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
     }
 }

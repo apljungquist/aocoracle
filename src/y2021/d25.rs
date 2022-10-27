@@ -67,6 +67,7 @@ fn _new_herds(old_east: &Herd, old_south: &Herd, height: usize, width: usize) ->
     }
     (new_east, new_south)
 }
+
 fn _num_herds(east: Herd, south: Herd) -> usize {
     let height = *east
         .iter()
@@ -104,7 +105,7 @@ pub fn part_1(input: &str) -> Result<String, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::actual_answer;
+    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input};
 
     #[test]
     fn part_1_works_on_example() {
@@ -114,5 +115,10 @@ mod tests {
     #[test]
     fn part_1_works_on_input() {
         assert_eq!(actual_answer(file!(), part_1, "6bb0c0bd67"), "516");
+    }
+
+    #[test]
+    fn returns_error_on_wrong_input() {
+        assert_returns_error_on_wrong_input(file!(), &part_1, &part_1);
     }
 }
