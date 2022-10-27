@@ -107,6 +107,8 @@ fn _candidates(args: &Cli) -> Result<BTreeMap<(u32, u32, u32), &Solver>, AnyErro
     Ok(result)
 }
 
+// TODO: Include a question identifier in the result to make it easier to see where
+//  false positives come from and so that it may be presented to users.
 pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
     let candidates: BTreeMap<(u32, u32, u32), &Solver> = _candidates(args)?;
     if candidates.is_empty() {
@@ -130,11 +132,7 @@ pub fn helper(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::{available_answers, expected_answer2, read_input};
-    use std::fs;
-
-    const NUM_DAY: u32 = 7;
-    const STEMS: [&str; 2] = ["example", "input"];
+    use crate::testing::{available_answers, available_inputs, expected_answer2, read_input};
 
     #[test]
     #[ignore]
@@ -151,22 +149,14 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn specific_day_returns_error_on_wrong_input() {
-        for day in 1..=NUM_DAY {
-            let args = Cli {
-                year: Some(2021),
-                day: Some(day),
-                part: None,
-            };
-            for input_day in (1..=NUM_DAY).filter(|d| *d != day) {
-                for stem in STEMS {
-                    let stdin =
-                        fs::read_to_string(format!("inputs/y2021/d{:02}/{}.txt", input_day, stem))
-                            .unwrap();
-                    println!("day:{} input_day:{} stem:{}", day, input_day, stem);
-                    helper(&args, &stdin).unwrap().len();
-                }
-            }
+    fn at_most_actual_answers() -> Result<(), AnyError> {
+        let args = Cli::default();
+        for (year, day, stem) in available_inputs() {
+            println!("y{} d{} {}", year, day, stem);
+            let actual_answers = helper(&args, &read_input(year, day, &stem))?;
+            println!("{:?}", actual_answers);
+            assert!(actual_answers.len() <= 2);
         }
+        Ok(())
     }
 }

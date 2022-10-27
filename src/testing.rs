@@ -1,4 +1,5 @@
 use crate::AnyError;
+use glob::glob;
 use std::collections::BTreeMap;
 use std::fs;
 
@@ -14,6 +15,36 @@ fn _year_day(file: &str) -> (u16, u8) {
 
 pub fn read_input(year: u16, day: u8, stem: &str) -> String {
     fs::read_to_string(format!("data/inputs/{:04}/{:02}/{}.txt", year, day, stem)).unwrap()
+}
+
+pub fn available_inputs() -> Vec<(u16, u8, String)> {
+    let mut result = Vec::new();
+    for entry in glob("data/inputs/*/*/*.txt").unwrap() {
+        let path = entry.unwrap();
+        let stem = path.file_stem().unwrap().to_str().unwrap();
+        let day = path
+            .ancestors()
+            .nth(1)
+            .unwrap()
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap();
+        let year = path
+            .ancestors()
+            .nth(2)
+            .unwrap()
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap();
+        result.push((
+            year.parse().unwrap(),
+            day.parse().unwrap(),
+            String::from(stem),
+        ))
+    }
+    result
 }
 
 pub fn actual_answer<F, T>(file: &str, func: F, stem: &str) -> T
