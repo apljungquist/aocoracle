@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     io::stdin().read_to_string(&mut text)?;
     let args = aoclib::Cli::from_args();
 
-    match aoclib::helper(&args, &text) {
+    match aoclib::helper_text(&args, &text) {
         Ok(lines) => {
             lines.iter().for_each(|line| println!("{}", line));
             Ok(())
