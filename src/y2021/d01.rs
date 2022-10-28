@@ -17,6 +17,10 @@ fn _depths(text: &str) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
 
 pub fn part_1(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     let depths = _depths(input)?;
+    // With 1 it is still possible to compute an answer but it will always be 0
+    if depths.len() < 2 {
+        return Err(format!("Expected at least 2 depths, got {}", depths.len()).into());
+    }
     Ok(format!(
         "{}",
         depths.windows(2).filter(|w| w[0] < w[1]).count()
@@ -25,6 +29,10 @@ pub fn part_1(input: &str) -> Result<String, Box<dyn std::error::Error>> {
 
 pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
     let depths: Vec<u32> = _depths(input)?.windows(3).map(|w| w.iter().sum()).collect();
+    // With 3 it is still possible to compute an answer but it will always be 0
+    if depths.len() < 4 {
+        return Err(format!("Expected at least 4 depths, got {}", depths.len()).into());
+    }
     Ok(format!(
         "{}",
         depths.windows(2).filter(|w| w[0] < w[1]).count()

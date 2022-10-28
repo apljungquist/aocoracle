@@ -33,7 +33,16 @@ fn _img(text: &str) -> Result<Img, AnyError> {
     let mut result = HashMap::new();
     let mut lines = text.lines();
     lines.next();
-    lines.next();
+    let blank = lines
+        .next()
+        .ok_or_else(|| String::from("Expected at least three lines but got two"))?;
+    if !blank.is_empty() {
+        return Err(format!(
+            "Expected an empty line before start of image but got {}",
+            blank
+        )
+        .into());
+    }
     for (r, line) in lines.enumerate() {
         for (c, cell) in line.chars().enumerate() {
             result.insert((r as i32, c as i32), _pixel(cell)?);

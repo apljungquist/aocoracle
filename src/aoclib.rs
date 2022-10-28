@@ -394,7 +394,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (0, 116, 0, 0, 14, num_input * num_solver),
+            (0, 80, 0, 0, 2, num_input * num_solver),
         );
         Ok(())
     }
