@@ -3,6 +3,9 @@ use crate::AnyError;
 fn _numbers(text: &str) -> Result<Vec<u32>, AnyError> {
     let mut result = Vec::new();
     for line in text.lines() {
+        if line.starts_with('0') {
+            return Err("Integers do not usually start with 0".into());
+        }
         result.push(line.parse::<u32>()?);
     }
     Ok(result)
