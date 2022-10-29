@@ -68,13 +68,12 @@ class Session:
         return hashlib.sha1(self._input(2020, 2).encode("ascii")).hexdigest()[:10]
 
     def input(self, year: int, day: int) -> str:
-        fingerprint = self._user_fingerprint()
         file_location = (
             self._cache_location
             / "inputs"
             / f"{year:04}"
             / f"{day:02}"
-            / f"{fingerprint}.txt"
+            / f"{self._user_fingerprint()}.txt"
         )
         if not file_location.exists():
             file_location.parent.mkdir(exist_ok=True, parents=True)
@@ -87,7 +86,7 @@ class Session:
             / "questions"
             / f"{year:04}"
             / f"{day:02}"
-            / "question.html"
+            / f"{self._user_fingerprint()}.html"
         )
         if not file_location.exists():
             file_location.parent.mkdir(exist_ok=True, parents=True)
