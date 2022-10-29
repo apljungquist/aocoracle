@@ -20,7 +20,21 @@
 none:
 	@echo No target specified
 
+.PHONY: check_format
+check_format:
+	isort bin/*.py --check
+	black bin/*.py --check
+	cargo fmt --check
 
+.PHONY: check_lint
+check_lint:
+	cargo clippy --tests
+
+.PHONY: check_tests
+check_tests:
+	cargo test
+
+.PHONY: fix_format
 fix_format:
 	isort bin/*.py
 	black bin/*.py

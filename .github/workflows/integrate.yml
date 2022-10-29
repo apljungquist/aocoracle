@@ -21,9 +21,9 @@ jobs:
       - name: Build
         run: cargo build --verbose
       - name: Check format
-        run: cargo fmt -- --check
+        run: cargo fmt --check
       - name: Check lint
-        run: cargo clippy
+        run: cargo clippy --tests
       - name: Check tests
         run: cargo test --verbose
       - name: Check publish
