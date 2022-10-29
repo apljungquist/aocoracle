@@ -324,7 +324,7 @@ mod tests {
             // Should be 0 but by setting it to the current value we
             // * detect regressions, and
             // * are notified if we can tighten the bound.
-            (0, 6),
+            (0, 8),
             "Expected no false negatives and false positives but got {} and {} respectively",
             num_false_negative,
             num_false_positive,
