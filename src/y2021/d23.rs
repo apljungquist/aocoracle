@@ -62,8 +62,12 @@ fn _fmt(vs: u64, len: u64) -> String {
 
 fn _rooms(input: &str) -> Result<Rooms, AnyError> {
     let mut lines = input.lines();
-    lines.next();
-    lines.next();
+    if lines.next().ok_or("Expected at least 5 lines but got 0")? != "#############" {
+        return Err("Expected first line to be '#############'".into());
+    }
+    if lines.next().ok_or("Expected at least 5 lines but got 1")? != "#...........#" {
+        return Err("Expected second line to be #...........#'".into());
+    }
     let mut result = [0; NUM_ROOM];
     for line in lines.rev() {
         for (occupant, room) in line
@@ -423,7 +427,6 @@ mod tests {
         assert_eq!(actual_answer(file!(), part_2, "6bb0c0bd67"), "49180");
     }
 
-    #[ignore]
     #[test]
     fn returns_error_on_wrong_input() {
         assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
