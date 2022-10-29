@@ -21,7 +21,7 @@ none:
 	@echo No target specified
 
 .PHONY: check_all
-check_all: check_format check_lint check_tests
+check_all: check_format check_lint check_tests check_tests_duration
 
 .PHONY: check_format
 check_format:
@@ -36,6 +36,10 @@ check_lint:
 .PHONY: check_tests
 check_tests:
 	cargo test
+
+.PHONY: check_tests_duration
+check_tests_duration:
+	cargo +nightly test --release -- -Z unstable-options --report-time
 
 .PHONY: fix_format
 fix_format:

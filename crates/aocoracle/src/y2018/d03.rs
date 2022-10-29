@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use crate::AnyError;
 
-#[derive(Clone, Hash)]
+#[derive(Clone, Debug, Hash)]
 struct Claim {
     left: u32,
     top: u32,
@@ -29,9 +29,25 @@ impl Claim {
     fn has_overlap(&self, other: &Claim) -> bool {
         let top = self.top.max(other.top);
         let right = (self.left + self.width).min(other.left + other.width);
-        let bottom = (self.top + self.height).min(other.top + other.width);
+        let bottom = (self.top + self.height).min(other.top + other.height);
         let left = self.left.max(other.left);
         left < right && top < bottom
+    }
+    fn overlap(&self, other: &Claim) -> Option<Claim> {
+        let top = self.top.max(other.top);
+        let right = (self.left + self.width).min(other.left + other.width);
+        let bottom = (self.top + self.height).min(other.top + other.height);
+        let left = self.left.max(other.left);
+        if right <= left || bottom <= top {
+            return None;
+        }
+        let result = Self {
+            left,
+            top,
+            width: right - left,
+            height: bottom - top,
+        };
+        Some(result)
     }
 }
 
@@ -42,12 +58,18 @@ struct Input {
 impl Input {
     fn part_one(&self) -> usize {
         // Feels wildly inefficient but it works even in debug mode
-        let counts = self
-            .claims
-            .values()
-            .flat_map(|claim| claim.coordinates())
-            .counts();
-        counts.values().filter(|&&count| count > 1).count()
+        let mut contended = HashSet::new();
+        for (id1, claim1) in self.claims.iter() {
+            for (id2, claim2) in self.claims.iter() {
+                if id1 == id2 {
+                    continue;
+                }
+                if let Some(overlap) = claim1.overlap(claim2) {
+                    contended.extend(overlap.coordinates());
+                }
+            }
+        }
+        contended.len()
     }
 
     fn try_part_two(&self) -> Result<usize, AnyError> {
