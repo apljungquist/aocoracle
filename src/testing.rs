@@ -1,9 +1,9 @@
-use crate::{AnyError, Solver};
+use crate::{AnyError, Part, Solver};
 use glob::glob;
 use std::collections::BTreeMap;
 use std::fs;
 
-type Answers = BTreeMap<u16, BTreeMap<u8, BTreeMap<u8, BTreeMap<String, String>>>>;
+type Answers = BTreeMap<u16, BTreeMap<u8, BTreeMap<Part, BTreeMap<String, String>>>>;
 
 fn _year_day(file: &str) -> (u16, u8) {
     let re = regex::Regex::new(r"y(\d{4})/d(\d{2})").expect("Hard coded regex is valid");
@@ -60,17 +60,17 @@ fn read_answers() -> Answers {
     serde_json::from_str(text).unwrap()
 }
 
-pub fn expected_answer2(year: u16, day: u8, part: u8, stem: &str) -> Option<String> {
+pub fn expected_answer2(year: u16, day: u8, part: Part, stem: &str) -> Option<String> {
     let answers = read_answers();
     Some(answers.get(&year)?.get(&day)?.get(&part)?.get(stem)?.into())
 }
 
-pub fn expected_answer(file: &str, part: u8, stem: &str) -> Option<String> {
+pub fn expected_answer(file: &str, part: Part, stem: &str) -> Option<String> {
     let (year, day) = _year_day(file);
     expected_answer2(year, day, part, stem)
 }
 
-pub fn available_answers() -> Vec<(u16, u8, u8, String)> {
+pub fn available_answers() -> Vec<(u16, u8, Part, String)> {
     let mut result = Vec::new();
     let answers = read_answers();
     for (year, days) in answers.into_iter() {

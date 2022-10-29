@@ -38,15 +38,15 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
 mod tests {
     use super::*;
     use crate::testing::{actual_answer, assert_returns_error_on_wrong_input, expected_answer};
+    use crate::Part;
 
-    fn assert_correct_answer(part: u8, stem: &str) {
+    fn assert_correct_answer(part: Part, stem: &str) {
         assert_eq!(
             actual_answer(
                 file!(),
                 match part {
-                    1 => part_1,
-                    2 => part_2,
-                    _ => panic!(),
+                    Part::One => part_1,
+                    Part::Two => part_2,
                 },
                 stem,
             ),
@@ -56,22 +56,22 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer(1, "example");
+        assert_correct_answer(Part::One, "example");
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer(1, "6bb0c0bd67");
+        assert_correct_answer(Part::One, "6bb0c0bd67");
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer(2, "example");
+        assert_correct_answer(Part::Two, "example");
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer(2, "6bb0c0bd67");
+        assert_correct_answer(Part::Two, "6bb0c0bd67");
     }
 
     #[test]

@@ -1,5 +1,7 @@
+use serde::Deserialize;
 use std::collections::BTreeMap;
-
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use structopt::StructOpt;
 
 #[cfg(test)]
@@ -8,6 +10,50 @@ mod y2018;
 mod y2020;
 mod y2021;
 
+#[derive(Eq, Ord, PartialEq, PartialOrd, Clone, Copy, Deserialize)]
+pub enum Part {
+    #[serde(alias = "1")]
+    One,
+    #[serde(alias = "2")]
+    Two,
+}
+
+impl TryFrom<u8> for Part {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Self::One),
+            2 => Ok(Self::Two),
+            _ => Err(format!("Expected integer in range [1, 2] but got {value}")),
+        }
+    }
+}
+
+impl FromStr for Part {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "1" => Ok(Self::One),
+            "2" => Ok(Self::Two),
+            _ => Err(format!("Expected one of '1' or '2' but got {s}")),
+        }
+    }
+}
+
+impl Display for Part {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(
+            &match self {
+                Self::One => 1,
+                Self::Two => 2,
+            },
+            f,
+        )
+    }
+}
+
 #[derive(StructOpt)]
 pub struct Cli {
     #[structopt(long)]
@@ -15,13 +61,13 @@ pub struct Cli {
     #[structopt(long)]
     day: Option<u8>,
     #[structopt(long)]
-    part: Option<u8>,
+    part: Option<Part>,
     #[structopt(long)]
     pub exhaustive: bool,
 }
 
 impl Cli {
-    pub fn new(year: Option<u16>, day: Option<u8>, part: Option<u8>, exhaustive: bool) -> Self {
+    pub fn new(year: Option<u16>, day: Option<u8>, part: Option<Part>, exhaustive: bool) -> Self {
         Self {
             year,
             day,
@@ -34,54 +80,52 @@ impl Cli {
 pub type AnyError = Box<dyn std::error::Error>;
 type Solver = dyn Fn(&str) -> Result<String, AnyError>;
 
-fn _available_solvers() -> BTreeMap<(u16, u8, u8), &'static Solver> {
+fn _available_solvers() -> BTreeMap<(u16, u8, Part), &'static Solver> {
     let mut functions: BTreeMap<_, &Solver> = BTreeMap::new();
-    functions.insert((2018, 1, 1), &y2018::d01::part_1);
-    functions.insert((2018, 1, 2), &y2018::d01::part_2);
-    functions.insert((2020, 1, 1), &y2020::d01::part_1);
-    functions.insert((2020, 1, 2), &y2020::d01::part_2);
-    functions.insert((2020, 2, 1), &y2020::d02::part_1);
-    functions.insert((2020, 2, 2), &y2020::d02::part_2);
-    functions.insert((2021, 1, 1), &y2021::d01::part_1);
-    functions.insert((2021, 1, 2), &y2021::d01::part_2);
-    functions.insert((2021, 2, 1), &y2021::d02::part_1);
-    functions.insert((2021, 2, 2), &y2021::d02::part_2);
-    functions.insert((2021, 3, 1), &y2021::d03::part_1);
-    functions.insert((2021, 3, 2), &y2021::d03::part_2);
-    functions.insert((2021, 4, 1), &y2021::d04::part_1);
-    functions.insert((2021, 4, 2), &y2021::d04::part_2);
-    functions.insert((2021, 5, 1), &y2021::d05::part_1);
-    functions.insert((2021, 5, 2), &y2021::d05::part_2);
-    functions.insert((2021, 6, 1), &y2021::d06::part_1);
-    functions.insert((2021, 6, 2), &y2021::d06::part_2);
-    functions.insert((2021, 7, 1), &y2021::d07::part_1);
-    functions.insert((2021, 7, 2), &y2021::d07::part_2);
-    functions.insert((2021, 8, 1), &y2021::d08::part_1);
-    functions.insert((2021, 8, 2), &y2021::d08::part_2);
-    functions.insert((2021, 20, 1), &y2021::d20::part_1);
-    functions.insert((2021, 20, 2), &y2021::d20::part_2);
-    functions.insert((2021, 21, 1), &y2021::d21::part_1);
-    functions.insert((2021, 21, 2), &y2021::d21::part_2);
-    functions.insert((2021, 22, 1), &y2021::d22::part_1);
-    functions.insert((2021, 22, 2), &y2021::d22::part_2);
-    functions.insert((2021, 23, 1), &y2021::d23::part_1);
-    functions.insert((2021, 23, 2), &y2021::d23::part_2);
-    functions.insert((2021, 24, 1), &y2021::d24::part_1);
-    functions.insert((2021, 24, 2), &y2021::d24::part_2);
-    functions.insert((2021, 25, 1), &y2021::d25::part_1);
+    functions.insert((2018, 1, Part::One), &y2018::d01::part_1);
+    functions.insert((2018, 1, Part::Two), &y2018::d01::part_2);
+    functions.insert((2020, 1, Part::One), &y2020::d01::part_1);
+    functions.insert((2020, 1, Part::Two), &y2020::d01::part_2);
+    functions.insert((2020, 2, Part::One), &y2020::d02::part_1);
+    functions.insert((2020, 2, Part::Two), &y2020::d02::part_2);
+    functions.insert((2021, 1, Part::One), &y2021::d01::part_1);
+    functions.insert((2021, 1, Part::Two), &y2021::d01::part_2);
+    functions.insert((2021, 2, Part::One), &y2021::d02::part_1);
+    functions.insert((2021, 2, Part::Two), &y2021::d02::part_2);
+    functions.insert((2021, 3, Part::One), &y2021::d03::part_1);
+    functions.insert((2021, 3, Part::Two), &y2021::d03::part_2);
+    functions.insert((2021, 4, Part::One), &y2021::d04::part_1);
+    functions.insert((2021, 4, Part::Two), &y2021::d04::part_2);
+    functions.insert((2021, 5, Part::One), &y2021::d05::part_1);
+    functions.insert((2021, 5, Part::Two), &y2021::d05::part_2);
+    functions.insert((2021, 6, Part::One), &y2021::d06::part_1);
+    functions.insert((2021, 6, Part::Two), &y2021::d06::part_2);
+    functions.insert((2021, 7, Part::One), &y2021::d07::part_1);
+    functions.insert((2021, 7, Part::Two), &y2021::d07::part_2);
+    functions.insert((2021, 8, Part::One), &y2021::d08::part_1);
+    functions.insert((2021, 8, Part::Two), &y2021::d08::part_2);
+    functions.insert((2021, 20, Part::One), &y2021::d20::part_1);
+    functions.insert((2021, 20, Part::Two), &y2021::d20::part_2);
+    functions.insert((2021, 21, Part::One), &y2021::d21::part_1);
+    functions.insert((2021, 21, Part::Two), &y2021::d21::part_2);
+    functions.insert((2021, 22, Part::One), &y2021::d22::part_1);
+    functions.insert((2021, 22, Part::Two), &y2021::d22::part_2);
+    functions.insert((2021, 23, Part::One), &y2021::d23::part_1);
+    functions.insert((2021, 23, Part::Two), &y2021::d23::part_2);
+    functions.insert((2021, 24, Part::One), &y2021::d24::part_1);
+    functions.insert((2021, 24, Part::Two), &y2021::d24::part_2);
+    functions.insert((2021, 25, Part::One), &y2021::d25::part_1);
     functions
 }
 
-fn _candidates(args: &Cli) -> Result<BTreeMap<(u16, u8, u8), &Solver>, AnyError> {
+fn _candidates(args: &Cli) -> Result<BTreeMap<(u16, u8, Part), &Solver>, AnyError> {
     let functions = _available_solvers();
     let mut result = BTreeMap::new();
-    let parts: Vec<u8> = match args.part {
-        None => 1..=2,
-        Some(1) => 1..=1,
-        Some(2) => 2..=2,
-        _ => return Err("Invalid part".into()),
-    }
-    .collect();
+    let parts: Vec<Part> = match args.part {
+        None => vec![Part::One, Part::Two],
+        Some(Part::One) => vec![Part::One],
+        Some(Part::Two) => vec![Part::Two],
+    };
 
     let days: Vec<u8> = match args.day {
         None => 1..=25,
@@ -113,8 +157,8 @@ fn _candidates(args: &Cli) -> Result<BTreeMap<(u16, u8, u8), &Solver>, AnyError>
     Ok(result)
 }
 
-pub fn helper(args: &Cli, text: &str) -> Result<BTreeMap<(u16, u8, u8), String>, AnyError> {
-    let candidates: BTreeMap<(u16, u8, u8), &Solver> = _candidates(args)?;
+pub fn helper(args: &Cli, text: &str) -> Result<BTreeMap<(u16, u8, Part), String>, AnyError> {
+    let candidates = _candidates(args)?;
     if candidates.is_empty() {
         return Err("Invalid combination of year, day and part".into());
     }
