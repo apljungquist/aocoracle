@@ -200,9 +200,10 @@ pub fn helper_text(args: &Cli, text: &str) -> Result<Vec<String>, AnyError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::{available_answers, expected_answer2, read_input};
+    use crate::testing::{available_inputs, expected_answer2, read_input};
     use itertools::Itertools;
     use std::fmt::Display;
+    use std::panic;
 
     fn as_strings<KT: Display, VT: Display>(map: &BTreeMap<KT, VT>) -> BTreeMap<String, String> {
         map.iter()
@@ -276,41 +277,72 @@ mod tests {
     #[test]
     fn every_input_is_solved_by_exactly_one_solver() -> Result<(), AnyError> {
         let mut cols = BTreeMap::new();
-        let mut num_false_positive = 0;
-        let mut num_false_negative = 0;
-        for (year, day, part) in _available_solvers().into_keys() {
-            let stems = available_answers().into_iter().filter_map(|(y, d, p, s)| {
-                if y == year && d == day && p == part {
-                    Some(s)
-                } else {
-                    None
-                }
+        let mut num_correct = 0;
+        let mut num_deletion = 0;
+        let mut num_insertion = 0;
+        let mut num_substitution = 0;
+        let mut num_true_negative = 0;
+        let mut num_unknown = 0;
+        let mut num_error = 0;
+        let mut num_panic = 0;
+        for (input_year, input_day, stem) in available_inputs() {
+            let input_key = || format!("{input_year}/{input_day:02}/{stem}");
+            let actual_answers = panic::catch_unwind(|| {
+                helper(
+                    &Cli::new(None, None, None, true),
+                    &read_input(input_year, input_day, &stem),
+                )
             });
-            for stem in stems {
-                let actual_answers = helper(
-                    &Cli::new(None, None, Some(part), true),
-                    &read_input(year, day, &stem),
-                )?;
-                let expected_answer = expected_answer2(year, day, part, &stem).unwrap();
-                if actual_answers.is_empty() {
-                    num_false_negative += 1;
-                    let input_key = format!("{year}/{day:02}/{stem}");
-                    let solver_key = format!("{year}/{day:02}::{part}");
-                    let entry = cols.entry(solver_key).or_insert_with(BTreeMap::new);
-                    assert_eq!(
-                        entry.insert(input_key, "-".into()),
-                        None,
-                        "Expected every input-solver pair to occur at most once"
-                    );
+            let mut actual_answers = match actual_answers {
+                Ok(Ok(a)) => a,
+                Ok(Err(_)) => {
+                    num_error += 1;
+                    continue;
                 }
-                for ((y, d, p), actual_answer) in actual_answers {
-                    if actual_answer != expected_answer {
-                        num_false_positive += 1;
-                        let input_key = format!("{year}/{day:02}/{stem}");
-                        let solver_key = format!("{y}/{d:02}::{p}");
-                        let entry = cols.entry(solver_key).or_insert_with(BTreeMap::new);
+                Err(_) => {
+                    num_panic += 1;
+                    continue;
+                }
+            };
+            // Assume that if it is not implemented it will not be among actual_answers
+            for (solver_year, solver_day, part) in _available_solvers().into_keys() {
+                let solver_key = || format!("{solver_year}/{solver_day:02}::{part}");
+                let correct_key = input_year == solver_year && input_day == solver_day;
+                let expected_answer = expected_answer2(input_year, input_day, part, &stem);
+                let actual_answer = actual_answers.remove(&(solver_year, solver_day, part));
+                match (correct_key, actual_answer, expected_answer) {
+                    (false, None, _) => {
+                        num_true_negative += 1;
+                    }
+                    (false, Some(a), _) => {
+                        num_insertion += 1;
+                        let entry = cols.entry(solver_key()).or_insert_with(BTreeMap::new);
                         assert_eq!(
-                            entry.insert(input_key, actual_answer),
+                            entry.insert(input_key(), a),
+                            None,
+                            "Expected every input-solver pair to occur at most once"
+                        );
+                    }
+                    (true, None, _) => {
+                        num_deletion += 1;
+                        let entry = cols.entry(solver_key()).or_insert_with(BTreeMap::new);
+                        assert_eq!(
+                            entry.insert(input_key(), "-".into()),
+                            None,
+                            "Expected every input-solver pair to occur at most once"
+                        );
+                    }
+                    (true, Some(_), None) => {
+                        num_unknown += 1;
+                    }
+                    (true, Some(a), Some(e)) if a == e => {
+                        num_correct += 1;
+                    }
+                    (true, Some(a), Some(_)) => {
+                        num_substitution += 1;
+                        let entry = cols.entry(solver_key()).or_insert_with(BTreeMap::new);
+                        assert_eq!(
+                            entry.insert(input_key(), a),
                             None,
                             "Expected every input-solver pair to occur at most once"
                         );
@@ -318,16 +350,51 @@ mod tests {
                 }
             }
         }
+        dbg!(num_correct);
+        dbg!(num_deletion);
+        dbg!(num_insertion);
+        dbg!(num_substitution);
+        dbg!(num_true_negative);
+        dbg!(num_unknown);
+        dbg!(num_error);
+        dbg!(num_panic);
+        let num_input = available_inputs().len();
+        let num_solver = _available_solvers().len();
+        let num_pair = num_correct
+            + num_deletion
+            + num_insertion
+            + num_substitution
+            + num_true_negative
+            + num_unknown
+            + num_error * num_solver
+            + num_panic * num_solver;
+        dbg!(num_input);
+        dbg!(num_solver);
+        dbg!(num_pair);
         println!("{}", as_ascii_table(&cols)?);
+        println!(
+            "word error rate: {}",
+            (num_deletion + num_insertion + num_substitution) as f64
+                / (num_error + num_correct) as f64
+        );
+        println!(
+            "f1 score: {}",
+            (2 * num_correct) as f64 / (2 * num_correct + num_insertion + num_deletion) as f64
+        );
         assert_eq!(
-            (num_false_negative, num_false_positive),
-            // Should be 0 but by setting it to the current value we
-            // * detect regressions, and
-            // * are notified if we can tighten the bound.
-            (0, 8),
-            "Expected no false negatives and false positives but got {} and {} respectively",
-            num_false_negative,
-            num_false_positive,
+            (
+                // Error counts should be 0 but by setting it to the current value we
+                // * detect regressions, and
+                // * are notified if we can tighten the bounds.
+                num_deletion,
+                num_insertion,
+                num_substitution,
+                num_error,
+                num_panic,
+                // Sanity check to see that every pair is counter once
+                num_pair,
+            ),
+            (0, 116, 0, 0, 14, num_input * num_solver),
         );
         Ok(())
     }

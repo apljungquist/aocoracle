@@ -70,7 +70,7 @@ pub fn expected_answer(file: &str, part: Part, stem: &str) -> Option<String> {
     expected_answer2(year, day, part, stem)
 }
 
-pub fn available_answers() -> Vec<(u16, u8, Part, String)> {
+fn _available_answers() -> Vec<(u16, u8, Part, String)> {
     let mut result = Vec::new();
     let answers = read_answers();
     for (year, days) in answers.into_iter() {
