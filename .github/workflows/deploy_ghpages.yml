@@ -1,0 +1,26 @@
+name: Publish to Github Pages
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+      - name: Install
+        run: cargo install --locked trunk
+      - name: Build
+        run: make dist/rel/index.html
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@bbdfb200618d235585ad98e965f4aafc39b4c501
+        with:
+          deploy_key: ${{ secrets.gh_pages_deploy_key }}
+          publish_dir: ./dist/rel/
