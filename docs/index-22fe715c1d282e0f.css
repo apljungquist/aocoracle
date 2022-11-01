@@ -1,0 +1,46 @@
+body, html {
+    height: 100%;
+    margin: 0;
+}
+
+body, textarea, button {
+    font-family: sans-serif;
+    font-size: 14px;
+    text-align: center;
+}
+
+textarea {
+    resize: none;
+    flex: 1 1 auto;
+}
+
+.column {
+    /*outline: 1px solid red;*/
+    display: flex;
+    flex-flow: column;
+    height: 100%;
+    margin: auto;
+    max-width: 60em;
+}
+
+.row {
+    /*outline: 1px dotted orange;*/
+    margin: 1em 1em 0 1em;
+}
+
+.row:last-child{
+    margin-bottom: 2em;
+}
+
+label:has(>input[type="radio"]) {
+    margin: 1em;
+    cursor: pointer;
+}
+
+#input-row {
+    display: flex;
+    flex: 1 1 auto;
+}
+#options-row, #button-row, #answer-row {
+    flex: 0 1 auto;
+}
