@@ -20,6 +20,9 @@
 none:
 	@echo No target specified
 
+.PHONY: check_all
+check_all: check_format check_lint check_tests
+
 .PHONY: check_format
 check_format:
 	isort bin/*.py --check

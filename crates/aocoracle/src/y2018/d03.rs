@@ -39,6 +39,31 @@ struct Input {
     claims: HashMap<usize, Claim>,
 }
 
+impl Input {
+    fn part_one(&self) -> usize {
+        // Feels wildly inefficient but it works even in debug mode
+        let counts = self
+            .claims
+            .values()
+            .flat_map(|claim| claim.coordinates())
+            .counts();
+        counts.values().filter(|&&count| count > 1).count()
+    }
+
+    fn try_part_two(&self) -> Result<usize, AnyError> {
+        let mut candidates: HashSet<_> = self.claims.keys().cloned().collect();
+        for (id1, claim1) in self.claims.iter() {
+            for (id2, claim2) in self.claims.iter() {
+                if id1 != id2 && claim1.has_overlap(claim2) {
+                    candidates.remove(id1);
+                    candidates.remove(id2);
+                }
+            }
+        }
+        Ok(candidates.into_iter().exactly_one()?)
+    }
+}
+
 impl FromStr for Input {
     type Err = AnyError;
 
@@ -66,32 +91,11 @@ impl FromStr for Input {
 }
 
 pub fn part_1(input: &str) -> Result<String, AnyError> {
-    let input = Input::from_str(input)?;
-    // Feels wildly inefficient but it works even in debug mode
-    let counts = input
-        .claims
-        .values()
-        .flat_map(|claim| claim.coordinates())
-        .counts();
-    Ok(counts
-        .values()
-        .filter(|&&count| count > 1)
-        .count()
-        .to_string())
+    Ok(Input::from_str(input)?.part_one().to_string())
 }
 
 pub fn part_2(input: &str) -> Result<String, AnyError> {
-    let input = Input::from_str(input)?;
-    let mut candidates: HashSet<_> = input.claims.keys().cloned().collect();
-    for (id1, claim1) in input.claims.iter() {
-        for (id2, claim2) in input.claims.iter() {
-            if id1 != id2 && claim1.has_overlap(claim2) {
-                candidates.remove(id1);
-                candidates.remove(id2);
-            }
-        }
-    }
-    Ok(candidates.into_iter().exactly_one()?.to_string())
+    Ok(Input::from_str(input)?.try_part_two()?.to_string())
 }
 
 #[cfg(test)]
