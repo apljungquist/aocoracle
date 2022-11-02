@@ -25,6 +25,7 @@ enum Msg {
 struct Model {
     input: String,
     part: aoclib::Part,
+    options_changed: bool,
     answers: Option<Vec<String>>,
 }
 
@@ -36,11 +37,16 @@ impl Component for Model {
         Self {
             input: "16,1,2,0,4,2,7,1,2,19".into(),
             part: aoclib::Part::One,
+            options_changed: true,
             answers: None,
         }
     }
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+        match msg {
+            Msg::Run => self.options_changed = false,
+            _ => self.options_changed = true,
+        }
         match msg {
             Msg::Run => {
                 self.answers = None;
@@ -106,7 +112,12 @@ impl Component for Model {
                     </label>
                 </div>
                 <div class="row" id="button-row">
-                        <button onclick={ctx.link().callback(|_| Msg::Run)}>{ format!("Tell us the answer to Part {}!", self.part.to_english()) }</button>
+                        <button
+                            onclick={ctx.link().callback(|_| Msg::Run)}
+                            disabled={!self.options_changed}
+                        >
+                            { "Tell us the answer!" }
+                        </button>
                 </div>
                 <div class="row" id="answer-row">
                     {answer}
