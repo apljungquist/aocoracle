@@ -84,6 +84,8 @@ fn _available_solvers() -> BTreeMap<(u16, u8, Part), &'static Solver> {
     let mut functions: BTreeMap<_, &Solver> = BTreeMap::new();
     functions.insert((2018, 1, Part::One), &y2018::d01::part_1);
     functions.insert((2018, 1, Part::Two), &y2018::d01::part_2);
+    functions.insert((2018, 2, Part::One), &y2018::d02::part_1);
+    functions.insert((2018, 2, Part::Two), &y2018::d02::part_2);
     functions.insert((2020, 1, Part::One), &y2020::d01::part_1);
     functions.insert((2020, 1, Part::Two), &y2020::d01::part_2);
     functions.insert((2020, 2, Part::One), &y2020::d02::part_1);
@@ -386,6 +388,7 @@ mod tests {
                 // Error counts should be 0 but by setting it to the current value we
                 // * detect regressions, and
                 // * are notified if we can tighten the bounds.
+                num_correct,
                 num_deletion,
                 num_insertion,
                 num_substitution,
@@ -394,7 +397,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (0, 80, 0, 0, 2, num_input * num_solver),
+            (67, 0, 84, 0, 0, 2, num_input * num_solver),
         );
         Ok(())
     }
