@@ -88,6 +88,8 @@ fn _available_solvers() -> BTreeMap<(u16, u8, Part), &'static Solver> {
     functions.insert((2018, 2, Part::Two), &y2018::d02::part_2);
     functions.insert((2018, 3, Part::One), &y2018::d03::part_1);
     functions.insert((2018, 3, Part::Two), &y2018::d03::part_2);
+    functions.insert((2018, 4, Part::One), &y2018::d04::part_1);
+    functions.insert((2018, 4, Part::Two), &y2018::d04::part_2);
     functions.insert((2020, 1, Part::One), &y2020::d01::part_1);
     functions.insert((2020, 1, Part::Two), &y2020::d01::part_2);
     functions.insert((2020, 2, Part::One), &y2020::d02::part_1);
@@ -399,7 +401,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (71, 0, 84, 0, 0, 2, num_input * num_solver),
+            (75, 0, 84, 0, 0, 2, num_input * num_solver),
         );
         Ok(())
     }
