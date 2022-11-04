@@ -1,10 +1,10 @@
 use hashbrown::HashMap;
-use std::cmp::Ordering;
+
 use std::str::FromStr;
 
 use itertools::Itertools;
 
-use crate::AnyError;
+use crate::{itersum, AnyError};
 
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord)]
 enum Entry {
@@ -16,33 +16,6 @@ enum Entry {
 #[derive(Debug)]
 struct Input {
     entries: Vec<Entry>,
-}
-
-fn unambiguous_argmax<KT, VT, Iter>(mut items: Iter) -> Result<KT, AnyError>
-where
-    VT: Copy + Ord,
-    Iter: Iterator<Item = (KT, VT)>,
-{
-    // Can be simplified if avoiding ambiguity is not important:
-    // items.max_by_key(|(_, v)| *v).map(|(k, _)| k)
-    let mut ambiguous = false;
-    let mut best = items.next().ok_or_else(|| String::from("Empty"))?;
-    for item in items {
-        match best.1.cmp(&item.1) {
-            Ordering::Less => {
-                best = item;
-                ambiguous = false;
-            }
-            Ordering::Equal => {
-                ambiguous = true;
-            }
-            Ordering::Greater => {}
-        }
-    }
-    if ambiguous {
-        return Err("Ambiguous".into());
-    }
-    Ok(best.0)
 }
 
 impl Input {
@@ -73,8 +46,8 @@ impl Input {
     fn try_part_one(&self) -> Result<usize, AnyError> {
         let minutes_asleep = self.minutes_asleep()?;
         let total_sleep = minutes_asleep.iter().map(|(id, _)| id).counts();
-        let chosen_id = **unambiguous_argmax(total_sleep.iter())?;
-        let chosen_minute = unambiguous_argmax(
+        let chosen_id = **itersum::unambiguous_argmax(total_sleep.iter())?;
+        let chosen_minute = itersum::unambiguous_argmax(
             minutes_asleep
                 .into_iter()
                 .filter_map(|(id, minute)| if id == chosen_id { Some(minute) } else { None })

@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use structopt::StructOpt;
 
+mod itersum;
 #[cfg(test)]
 mod testing;
 mod y2018;
