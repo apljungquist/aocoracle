@@ -4,7 +4,7 @@ use itertools::Itertools;
 use std::str::FromStr;
 
 struct Input {
-    pub ids: Vec<String>,
+    pub ids: Vec<Vec<u8>>,
 }
 
 impl FromStr for Input {
@@ -30,7 +30,7 @@ impl FromStr for Input {
             } else {
                 expected_len = Some(id.len());
             }
-            ids.push(id);
+            ids.push(id.bytes().collect());
         }
 
         if ids.len() < 2 {
@@ -45,14 +45,17 @@ impl FromStr for Input {
     }
 }
 
-fn exactly_one_corrected(s1: &str, s2: &str) -> Option<String> {
+fn exactly_one_corrected<T>(s1: &[T], s2: &[T]) -> Option<Vec<T>>
+where
+    T: Copy + Eq,
+{
     let len = s1.len();
     assert_eq!(len, s2.len());
     let mut num_err = 0;
-    let mut result = String::with_capacity(len - 1);
-    for (c1, c2) in s1.chars().zip(s2.chars()) {
+    let mut result = Vec::with_capacity(len - 1);
+    for (c1, c2) in s1.iter().zip(s2.iter()) {
         if c1 == c2 {
-            result.push(c1);
+            result.push(*c1);
         } else if num_err == 0 {
             num_err += 1;
         } else {
@@ -70,7 +73,7 @@ pub fn part_1(input: &str) -> Result<String, AnyError> {
     let counts: Vec<HashSet<usize>> = input
         .ids
         .iter()
-        .map(|id| id.chars().counts().into_values().collect())
+        .map(|id| id.iter().counts().into_values().collect())
         .collect();
     let num_2 = counts.iter().filter(|count| count.contains(&2)).count();
     let num_3 = counts.iter().filter(|count| count.contains(&3)).count();
@@ -80,12 +83,14 @@ pub fn part_1(input: &str) -> Result<String, AnyError> {
 
 pub fn part_2(input: &str) -> Result<String, AnyError> {
     let input = Input::from_str(input)?;
-    Ok(input
-        .ids
-        .into_iter()
-        .tuple_combinations()
-        .flat_map(|(s1, s2)| exactly_one_corrected(&s1, &s2))
-        .exactly_one()?)
+    Ok(String::from_utf8(
+        input
+            .ids
+            .into_iter()
+            .tuple_combinations()
+            .flat_map(|(s1, s2)| exactly_one_corrected(&s1, &s2))
+            .exactly_one()?,
+    )?)
 }
 
 #[cfg(test)]
