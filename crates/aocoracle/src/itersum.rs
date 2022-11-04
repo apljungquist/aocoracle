@@ -1,12 +1,14 @@
 /// Functions for summarizing iterators into a constant number of values
-use crate::AnyError;
 use hashbrown::HashMap;
 use std::cmp::Ordering;
 use std::hash::Hash;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum AggregationError {
+    #[error("Input is empty")]
     TooFew,
+    #[error("Output is ambiguous")]
     TooMany,
 }
 
@@ -32,7 +34,7 @@ pub fn mode<T: Copy + Eq + Hash>(values: impl Iterator<Item = T>) -> Result<T, A
     Ok(*best.0)
 }
 
-pub fn unambiguous_argmax<KT, VT, Iter>(mut items: Iter) -> Result<KT, AnyError>
+pub fn unambiguous_argmax<KT, VT, Iter>(mut items: Iter) -> Result<KT, AggregationError>
 where
     VT: Copy + Ord,
     Iter: Iterator<Item = (KT, VT)>,
@@ -40,7 +42,7 @@ where
     // Can be simplified if avoiding ambiguity is not important:
     // items.max_by_key(|(_, v)| *v).map(|(k, _)| k)
     let mut ambiguous = false;
-    let mut best = items.next().ok_or_else(|| String::from("Empty"))?;
+    let mut best = items.next().ok_or(AggregationError::TooFew)?;
     for item in items {
         match best.1.cmp(&item.1) {
             Ordering::Less => {
@@ -54,7 +56,7 @@ where
         }
     }
     if ambiguous {
-        return Err("Ambiguous".into());
+        return Err(AggregationError::TooMany);
     }
     Ok(best.0)
 }
