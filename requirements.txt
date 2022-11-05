@@ -1,6 +1,7 @@
 black
 isort
 fire
+mkhelp
 pip
 requests
 setuptools
