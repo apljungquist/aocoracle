@@ -2,7 +2,7 @@ use std::io;
 use std::io::Read;
 use structopt::StructOpt;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let mut text = String::new();

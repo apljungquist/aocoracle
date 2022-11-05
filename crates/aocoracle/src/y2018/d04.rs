@@ -1,10 +1,11 @@
 use hashbrown::HashMap;
 
+use anyhow::{anyhow, bail};
 use std::str::FromStr;
 
 use itertools::Itertools;
 
-use crate::{itersum, AnyError};
+use crate::itersum;
 
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord)]
 enum Entry {
@@ -19,7 +20,7 @@ struct Input {
 }
 
 impl Input {
-    fn minutes_asleep(&self) -> Result<Vec<(usize, u8)>, AnyError> {
+    fn minutes_asleep(&self) -> anyhow::Result<Vec<(usize, u8)>> {
         let mut result = Vec::new();
         let mut guard_id = 0;
         let mut guard_asleep_since = 0;
@@ -39,25 +40,40 @@ impl Input {
             }
         }
         if result.is_empty() {
-            return Err("Expected at least one guard to go asleep".into());
+            bail!("Expected at least one guard to go asleep");
         }
         Ok(result)
     }
-    fn try_part_one(&self) -> Result<usize, AnyError> {
+    fn try_part_one(&self) -> anyhow::Result<usize> {
         let minutes_asleep = self.minutes_asleep()?;
         let total_sleep = minutes_asleep.iter().map(|(id, _)| id).counts();
-        let chosen_id = **itersum::unambiguous_argmax(total_sleep.iter())?;
+        let chosen_id = **itersum::unambiguous_argmax(total_sleep.iter()).map_err(|e| match e {
+            itersum::AggregationError::TooFew => {
+                panic!("minutes_asleep guarantees there is at least one guard")
+            }
+            itersum::AggregationError::TooMany => {
+                anyhow::Error::from(e).context("Failed to pick a single guard")
+            }
+        })?;
         let chosen_minute = itersum::unambiguous_argmax(
             minutes_asleep
                 .into_iter()
                 .filter_map(|(id, minute)| if id == chosen_id { Some(minute) } else { None })
                 .counts()
                 .into_iter(),
-        )? as usize;
+        )
+        .map_err(|e| match e {
+            itersum::AggregationError::TooFew => {
+                panic!("minutes_asleep guarantees there is at least one minute")
+            }
+            itersum::AggregationError::TooMany => {
+                anyhow::Error::from(e).context("Failed to pick a single minute")
+            }
+        })? as usize;
         Ok(chosen_id * chosen_minute)
     }
 
-    fn try_part_two(&self) -> Result<usize, AnyError> {
+    fn try_part_two(&self) -> anyhow::Result<usize> {
         let minutes_asleep = self.minutes_asleep()?;
         let mut sleep_minutes = HashMap::new();
         for (guard, minute) in minutes_asleep.into_iter() {
@@ -83,7 +99,7 @@ impl Input {
 }
 
 impl FromStr for Input {
-    type Err = AnyError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut with_time = Vec::new();
@@ -92,7 +108,7 @@ impl FromStr for Input {
         for line in s.lines() {
             let cap = re
                 .captures(line)
-                .ok_or(format!("Could not capture line {}", line))?;
+                .ok_or_else(|| anyhow!("Could not capture line {line:}"))?;
 
             let datetime = String::from(&cap[1]);
             let minute = cap[2].parse::<u8>()?;
@@ -109,23 +125,23 @@ impl FromStr for Input {
     }
 }
 
-pub fn part_1(input: &str) -> Result<String, AnyError> {
+pub fn part_1(input: &str) -> anyhow::Result<String> {
     Ok(Input::from_str(input)?.try_part_one()?.to_string())
 }
 
-pub fn part_2(input: &str) -> Result<String, AnyError> {
+pub fn part_2(input: &str) -> anyhow::Result<String> {
     Ok(Input::from_str(input)?.try_part_two()?.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input, expected_answer};
+    use crate::testing::{actual_answer2, assert_returns_error_on_wrong_input2, expected_answer};
     use crate::Part;
 
     fn assert_correct_answer(part: Part, stem: &str) {
         assert_eq!(
-            actual_answer(
+            actual_answer2(
                 file!(),
                 match part {
                     Part::One => part_1,
@@ -159,6 +175,6 @@ mod tests {
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
+        assert_returns_error_on_wrong_input2(file!(), &part_1, &part_2);
     }
 }

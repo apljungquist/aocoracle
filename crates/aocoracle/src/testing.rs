@@ -1,4 +1,5 @@
-use crate::{AnyError, Part, Solver};
+use crate::{AnyError, Part, Solver, Solver2};
+use anyhow::anyhow;
 use glob::glob;
 use std::collections::BTreeMap;
 use std::fs;
@@ -59,6 +60,14 @@ where
     func(&read_input(year, day, stem)).unwrap()
 }
 
+pub fn actual_answer2<F, T>(file: &str, func: F, stem: &str) -> T
+where
+    F: Fn(&str) -> anyhow::Result<T>,
+{
+    let (year, day) = _year_day(file);
+    func(&read_input(year, day, stem)).unwrap()
+}
+
 fn read_answers() -> Answers {
     let text = &fs::read_to_string("../../data/answers.json").unwrap();
     serde_json::from_str(text).unwrap()
@@ -89,7 +98,19 @@ fn _available_answers() -> Vec<(u16, u8, Part, String)> {
     result
 }
 
-pub fn assert_returns_error_on_wrong_input(file: &str, part_1: &Solver, part_2: &Solver) {
+pub fn assert_returns_error_on_wrong_input(
+    file: &str,
+    part_1: &'static Solver,
+    part_2: &'static Solver,
+) {
+    assert_returns_error_on_wrong_input2(
+        file,
+        &|s| part_1(s).map_err(|err| anyhow!("{err}")),
+        &|s| part_2(s).map_err(|err| anyhow!("{err}")),
+    );
+}
+
+pub fn assert_returns_error_on_wrong_input2(file: &str, part_1: &Solver2, part_2: &Solver2) {
     let (skip_year, skip_day) = _year_day(file);
     for (year, day, stem) in available_inputs() {
         if year == skip_year && day == skip_day {
