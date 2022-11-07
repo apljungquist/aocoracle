@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use crate::{itersum, AnyError};
+use crate::itersum::Itersum;
+use crate::AnyError;
 
 fn _rows(text: &str) -> Result<Vec<Vec<bool>>, AnyError> {
     let mut result = Vec::new();
@@ -43,31 +44,23 @@ fn _from_bits(bits: Vec<bool>) -> u32 {
 }
 
 fn _gamma(cols: &[Vec<bool>]) -> u32 {
-    _from_bits(
-        cols.iter()
-            .map(|vs| *itersum::mode(vs.iter()).unwrap())
-            .collect(),
-    )
+    _from_bits(cols.iter().map(|vs| *vs.iter().mode().unwrap()).collect())
 }
 
 fn _epsilon(cols: &[Vec<bool>]) -> u32 {
-    _from_bits(
-        cols.iter()
-            .map(|vs| !*itersum::mode(vs.iter()).unwrap())
-            .collect(),
-    )
+    _from_bits(cols.iter().map(|vs| !*vs.iter().mode().unwrap()).collect())
 }
 
 fn _oxygen(cols: &[Vec<bool>]) -> u32 {
     let mut rows: HashSet<usize> = (0..cols.iter().map(|c| c.len()).max().unwrap()).collect();
     for col in cols {
-        let target = *itersum::mode(
-            col.iter()
-                .enumerate()
-                .filter(|(i, _)| rows.contains(i))
-                .map(|(_, v)| v),
-        )
-        .unwrap_or(&true);
+        let target = *col
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| rows.contains(i))
+            .map(|(_, v)| v)
+            .mode()
+            .unwrap_or(&true);
         for (i, actual) in col.iter().enumerate() {
             if *actual != target {
                 rows.remove(&i);
@@ -87,13 +80,13 @@ fn _carbon(cols: &[Vec<bool>]) -> u32 {
     for col in cols {
         // Since the value is boolean the least common value is whatever value is not the most common.
         // And since we negate the expression we do not need to negate the default value.
-        let target = !*itersum::mode(
-            col.iter()
-                .enumerate()
-                .filter(|(i, _)| rows.contains(i))
-                .map(|(_, v)| v),
-        )
-        .unwrap_or(&true);
+        let target = !*col
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| rows.contains(i))
+            .map(|(_, v)| v)
+            .mode()
+            .unwrap_or(&true);
         for (i, actual) in col.iter().enumerate() {
             if *actual != target {
                 rows.remove(&i);

@@ -1,11 +1,9 @@
-use hashbrown::HashMap;
-
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use std::str::FromStr;
 
 use itertools::Itertools;
 
-use crate::itersum;
+use crate::itersum::Itersum;
 
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord)]
 enum Entry {
@@ -20,81 +18,40 @@ struct Input {
 }
 
 impl Input {
-    fn minutes_asleep(&self) -> anyhow::Result<Vec<(usize, u8)>> {
+    fn minutes_asleep(&self) -> Vec<(usize, u8)> {
         let mut result = Vec::new();
-        let mut guard_id = 0;
+        let mut guard = 0;
         let mut guard_asleep_since = 0;
         for entry in self.entries.iter() {
             match entry {
-                Entry::Begin(id) => {
-                    guard_id = *id;
+                Entry::Begin(g) => {
+                    guard = *g;
                 }
-                Entry::Sleep(minute) => {
-                    guard_asleep_since = *minute;
+                Entry::Sleep(m) => {
+                    guard_asleep_since = *m;
                 }
-                Entry::Wake(minute) => {
-                    for i in guard_asleep_since..*minute {
-                        result.push((guard_id, i));
+                Entry::Wake(m) => {
+                    for i in guard_asleep_since..*m {
+                        result.push((guard, i));
                     }
                 }
             }
         }
-        if result.is_empty() {
-            bail!("Expected at least one guard to go asleep");
-        }
-        Ok(result)
+        result
     }
     fn try_part_one(&self) -> anyhow::Result<usize> {
-        let minutes_asleep = self.minutes_asleep()?;
-        let total_sleep = minutes_asleep.iter().map(|(id, _)| id).counts();
-        let chosen_id = **itersum::unambiguous_argmax(total_sleep.iter()).map_err(|e| match e {
-            itersum::AggregationError::TooFew => {
-                panic!("minutes_asleep guarantees there is at least one guard")
-            }
-            itersum::AggregationError::TooMany => {
-                anyhow::Error::from(e).context("Failed to pick a single guard")
-            }
-        })?;
-        let chosen_minute = itersum::unambiguous_argmax(
-            minutes_asleep
-                .into_iter()
-                .filter_map(|(id, minute)| if id == chosen_id { Some(minute) } else { None })
-                .counts()
-                .into_iter(),
-        )
-        .map_err(|e| match e {
-            itersum::AggregationError::TooFew => {
-                panic!("minutes_asleep guarantees there is at least one minute")
-            }
-            itersum::AggregationError::TooMany => {
-                anyhow::Error::from(e).context("Failed to pick a single minute")
-            }
-        })? as usize;
-        Ok(chosen_id * chosen_minute)
+        let minutes_asleep = self.minutes_asleep();
+        let guard = *minutes_asleep.iter().map(|(g, _)| g).mode()?;
+        let minute = minutes_asleep
+            .into_iter()
+            .filter_map(|(g, m)| if g == guard { Some(m) } else { None })
+            .mode()?;
+        Ok(guard * minute as usize)
     }
 
     fn try_part_two(&self) -> anyhow::Result<usize> {
-        let minutes_asleep = self.minutes_asleep()?;
-        let mut sleep_minutes = HashMap::new();
-        for (guard, minute) in minutes_asleep.into_iter() {
-            let entry = sleep_minutes.entry(guard).or_insert_with(HashMap::new);
-            *entry.entry(minute).or_insert(0) += 1;
-        }
-        let sleep_minutes = sleep_minutes;
-        let guard2chosen_minute = sleep_minutes
-            .into_iter()
-            .map(|(id, counts)| {
-                (
-                    id,
-                    counts.into_iter().max_by_key(|(_, count)| *count).unwrap(),
-                )
-            })
-            .collect::<HashMap<_, _>>();
-        let chosen = guard2chosen_minute
-            .into_iter()
-            .max_by_key(|(_, (_, count))| *count)
-            .expect("minutes_asleep guarantees there is at least one guard");
-        Ok(chosen.0 * (chosen.1 .0 as usize))
+        let (guard, minute) = self.minutes_asleep().into_iter().mode()?;
+        Ok(guard * minute as usize)
     }
 }
 
