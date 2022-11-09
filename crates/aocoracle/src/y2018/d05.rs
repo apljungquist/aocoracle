@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 
 #[derive(Debug)]
 struct Input {
@@ -18,15 +18,14 @@ fn same_type(left: u8, right: u8) -> bool {
 fn reduced(mut right: Vec<u8>) -> Vec<u8> {
     right.reverse();
     let mut left = Vec::with_capacity(right.len());
-    while !right.is_empty() {
-        if left.is_empty() {
-            left.push(right.pop().unwrap());
-        } else if same_type_opposite_polarity(*left.last().unwrap(), *right.last().unwrap()) {
-            left.pop();
-            right.pop();
-        } else {
-            left.push(right.pop().unwrap());
+    while let Some(r) = right.pop() {
+        if let Some(l) = left.last() {
+            if same_type_opposite_polarity(*l, r) {
+                left.pop();
+                continue;
+            }
         }
+        left.push(r);
     }
     left
 }
@@ -59,20 +58,12 @@ impl FromStr for Input {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = regex::Regex::new(r"^([A-Za-z]+)$").expect("Hard coded regex is valid");
-        let mut lines = s.lines();
-        let line = lines
-            .next()
-            .ok_or_else(|| anyhow!("Expected at least one line"))?;
-        if lines.next().is_some() {
-            bail!("Expected no more than one line");
-        }
+        let re = regex::Regex::new(r"(?m)\A([A-Za-z]+)\n\z").expect("Hard coded regex is valid");
         let cap = re
-            .captures(line)
-            .ok_or_else(|| anyhow!("Could not capture line {line}"))?;
-
+            .captures(s)
+            .ok_or_else(|| anyhow!("Regex \"{re:?}\" could not capture text {s:?}"))?;
         Ok(Self {
-            polymer: cap[0].bytes().collect(),
+            polymer: cap[1].bytes().collect(),
         })
     }
 }
@@ -127,7 +118,7 @@ mod tests {
     }
 
     //Fails on 2015/04/3ba7923eae
-    // That is a signle line of lower case letters which is unlikely to be an official input to
+    // That is a single line of lower case letters which is unlikely to be an official input to
     // this problem but it nonetheless seems like it should be considered valid.
     #[ignore]
     #[test]
