@@ -18,6 +18,7 @@ impl ToEnglish for aoclib::Part {
 
 enum Msg {
     Run,
+    RemoveAnswer,
     Update(String),
     SetPart(aoclib::Part),
 }
@@ -44,10 +45,18 @@ impl Component for Model {
 
     fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
+            Msg::RemoveAnswer => {}
             Msg::Run => self.options_changed = false,
             _ => self.options_changed = true,
         }
         match msg {
+            Msg::RemoveAnswer => {
+                if let Some(answers) = self.answers.as_mut() {
+                    answers.remove(0);
+                } else {
+                    log::error!("This should not be possible in the UI");
+                }
+            }
             Msg::Run => {
                 self.answers = None;
                 let args = aoclib::Cli::new(None, None, Some(self.part), true);
@@ -85,6 +94,22 @@ impl Component for Model {
                 }
             }
         };
+        let button: Html = {
+            if self.options_changed || self.answers.is_none() {
+                html!(
+                        <button onclick={ctx.link().callback(|_| Msg::Run)} >
+                            { "Tell us the answer!" }
+                        </button>
+                )
+            } else {
+                let answers = self.answers.as_ref().expect("None is handled in if above");
+                html!(
+                        <button onclick={ctx.link().callback(|_| Msg::RemoveAnswer)} disabled={answers.len()<2}>
+                            { "Tell us another one!" }
+                        </button>
+                )
+            }
+        };
 
         html! {
             <div class="column">
@@ -112,12 +137,7 @@ impl Component for Model {
                     </label>
                 </div>
                 <div class="row" id="button-row">
-                        <button
-                            onclick={ctx.link().callback(|_| Msg::Run)}
-                            disabled={!self.options_changed}
-                        >
-                            { "Tell us the answer!" }
-                        </button>
+                    {button}
                 </div>
                 <div class="row" id="answer-row">
                     {answer}
