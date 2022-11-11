@@ -1,9 +1,111 @@
 use std::cmp::Ordering;
+
 use std::str::FromStr;
 
 use anyhow::anyhow;
-use hashbrown::{HashMap, HashSet};
+use hashbrown::HashSet;
 use itertools::{Itertools, MinMaxResult};
+
+struct Grid<T> {
+    left: usize,
+    top: usize,
+    width: usize,
+    height: usize,
+    pub data: Vec<T>,
+}
+
+impl<T> Grid<T>
+where
+    T: Clone,
+{
+    fn from_coordinates(coordinates: &[(usize, usize)], default: T) -> Self {
+        let (left, right) = match coordinates.iter().map(|(x, _)| x).minmax() {
+            MinMaxResult::NoElements => {
+                panic!("Expected at least one coordinate")
+            }
+            MinMaxResult::OneElement(x) => (*x, *x),
+            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
+        };
+        let (top, bottom) = match coordinates.iter().map(|(_, y)| y).minmax() {
+            MinMaxResult::NoElements => {
+                panic!("Expected at least one coordinate")
+            }
+            MinMaxResult::OneElement(x) => (*x, *x),
+            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
+        };
+        let width = right - left + 1;
+        let height = bottom - top + 1;
+        let area = width * height;
+        Self {
+            left,
+            top,
+            width,
+            height,
+            data: vec![default; area],
+        }
+    }
+
+    // I wanted to try implementing this as an iterator with mutable references but I think this may
+    // be impossible using safe rust.
+    fn apply<F>(&mut self, f: F)
+    where
+        F: Fn(usize, usize, &mut T),
+    {
+        for (i, value) in self.data.iter_mut().enumerate() {
+            let x = self.left + i % self.width;
+            let y = self.top + i / self.width;
+            f(x, y, value);
+        }
+    }
+
+    // I wanted to try implementing this as an iterator but found no good way to track the state.
+    // When collecting the indices to a vector it takes twice the time of the for each
+    // implementation.
+    // It seems it should be possible to avoid collecting the indices by using chain but so far I
+    // have been unsuccessful.
+    // Besides, iterators are a lot of boilerplate.
+    fn foreach_border_value<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&T),
+    {
+        for col in 0..self.width {
+            for row in [0, self.height - 1] {
+                f(&self.data[col + row * self.width]);
+            }
+        }
+        for row in 0..self.height {
+            for col in [0, self.width - 1] {
+                f(&self.data[col + row * self.width]);
+            }
+        }
+    }
+}
+
+impl Grid<(usize, Option<u8>)> {
+    fn _print(&self, coordinates: &[(usize, usize)]) {
+        let coordinates: HashSet<_> = coordinates.iter().collect();
+        let mut line = String::with_capacity(self.width);
+        for (i, (_, label)) in self.data.iter().enumerate() {
+            let x = self.left + i % self.width;
+            let y = self.top + i / self.width;
+            if x == self.left {
+                println!("{}", line);
+                line.clear();
+            }
+            line.push(match label {
+                None => '.',
+                Some(label) => {
+                    if coordinates.contains(&(x, y)) {
+                        (label + 65) as char
+                    } else {
+                        (label + 97) as char
+                    }
+                }
+            });
+        }
+        println!("{}", line);
+    }
+}
 
 #[derive(Debug)]
 struct Input {
@@ -11,85 +113,33 @@ struct Input {
 }
 
 impl Input {
-    fn _print_grid(&self, grid: &HashMap<(usize, usize), (usize, Option<u8>)>) {
-        let coordinates: HashSet<_> = self.coordinates.iter().collect();
-        let left = *grid.keys().map(|(x, _)| x).min().unwrap();
-        let right = *grid.keys().map(|(x, _)| x).max().unwrap();
-        let top = *grid.keys().map(|(_, y)| y).min().unwrap();
-        let bottom = *grid.keys().map(|(_, y)| y).max().unwrap();
-        for y in top..=bottom {
-            let line: String = (left..=right)
-                .map(|x| match grid.get(&(x, y)) {
-                    None => '?',
-                    Some((_, None)) => '.',
-                    Some((_, Some(label))) => {
-                        if coordinates.contains(&(x, y)) {
-                            (label + 65) as char
-                        } else {
-                            (label + 97) as char
-                        }
-                    }
-                })
-                .collect();
-            println!("{}", line)
-        }
-    }
-
     fn try_part_one(&self) -> anyhow::Result<usize> {
-        let (left, right) = match self.coordinates.iter().map(|(x, _)| x).minmax() {
-            MinMaxResult::NoElements => {
-                panic!("Expected at least one coordinate")
-            }
-            MinMaxResult::OneElement(x) => (*x, *x),
-            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
-        };
-        let (top, bottom) = match self.coordinates.iter().map(|(_, y)| y).minmax() {
-            MinMaxResult::NoElements => {
-                panic!("Expected at least one coordinate")
-            }
-            MinMaxResult::OneElement(x) => (*x, *x),
-            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
-        };
-        let mut grid: HashMap<(usize, usize), (usize, Option<u8>)> = HashMap::new();
-        for x in left..=right {
-            for y in top..=bottom {
-                for (new_label, c) in self.coordinates.iter().enumerate() {
-                    let new_distance = x.abs_diff(c.0) + y.abs_diff(c.1);
-                    match grid.get(&(x, y)) {
-                        None => {
-                            grid.insert((x, y), (new_distance, Some(new_label as u8)));
-                        }
-                        Some((old_distance, _)) => match new_distance.cmp(old_distance) {
-                            Ordering::Less => {
-                                grid.insert((x, y), (new_distance, Some(new_label as u8)));
-                            }
-                            Ordering::Equal => {
-                                grid.insert((x, y), (new_distance, None));
-                            }
-                            Ordering::Greater => {}
-                        },
+        let mut grid = Grid::from_coordinates(&self.coordinates, (usize::MAX, None));
+        grid.apply(|x, y, old| {
+            for (new_label, c) in self.coordinates.iter().enumerate() {
+                let new_distance = x.abs_diff(c.0) + y.abs_diff(c.1);
+                match new_distance.cmp(&old.0) {
+                    Ordering::Less => {
+                        *old = (new_distance, Some(new_label as u8));
                     }
-                }
+                    Ordering::Equal => {
+                        *old = (new_distance, None);
+                    }
+                    Ordering::Greater => {}
+                };
             }
-        }
+        });
 
-        let mut infinites = HashSet::new();
-        for x in left..=right {
-            for y in [top, bottom] {
-                if let Some((_, Some(label))) = grid.get(&(x, y)) {
-                    infinites.insert(label);
-                }
+        // An iterator may be nicer but is annoying to implement.
+        // Returning a list with border values feels wasteful.
+        let mut infinites: HashSet<u8> = HashSet::new();
+        grid.foreach_border_value(|(_, l)| {
+            if let Some(l) = l {
+                infinites.insert(*l);
             }
-        }
-        for y in top..=bottom {
-            for x in [left, right] {
-                if let Some((_, Some(label))) = grid.get(&(x, y)) {
-                    infinites.insert(label);
-                }
-            }
-        }
+        });
 
-        let mut finite_areas = grid.values().flat_map(|(_, l)| l).counts();
+        let mut finite_areas = grid.data.iter().flat_map(|(_, l)| l).counts();
         finite_areas.retain(|k, _| !infinites.contains(k));
 
         finite_areas
@@ -99,30 +149,14 @@ impl Input {
     }
 
     fn part_two_x(&self, threshold: usize) -> usize {
-        let (left, right) = match self.coordinates.iter().map(|(x, _)| x).minmax() {
-            MinMaxResult::NoElements => {
-                panic!("Expected at least one coordinate")
+        let mut grid = Grid::from_coordinates(&self.coordinates, 0);
+        grid.apply(|x, y, old| {
+            for c in self.coordinates.iter() {
+                let marginal_distance = x.abs_diff(c.0) + y.abs_diff(c.1);
+                *old += marginal_distance;
             }
-            MinMaxResult::OneElement(x) => (*x, *x),
-            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
-        };
-        let (top, bottom) = match self.coordinates.iter().map(|(_, y)| y).minmax() {
-            MinMaxResult::NoElements => {
-                panic!("Expected at least one coordinate")
-            }
-            MinMaxResult::OneElement(x) => (*x, *x),
-            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
-        };
-        let mut grid: HashMap<(usize, usize), usize> = HashMap::new();
-        for x in left..=right {
-            for y in top..=bottom {
-                for c in self.coordinates.iter() {
-                    let marginal_distance = x.abs_diff(c.0) + y.abs_diff(c.1);
-                    *grid.entry((x, y)).or_default() += marginal_distance;
-                }
-            }
-        }
-        grid.drain_filter(|_, d| *d < threshold).count()
+        });
+        grid.data.into_iter().filter(|d| *d < threshold).count()
     }
 
     fn _part_two_a(&self) -> usize {
@@ -156,6 +190,7 @@ pub fn part_1(input: &str) -> anyhow::Result<String> {
 pub fn _part_2a(input: &str) -> anyhow::Result<String> {
     Ok(Input::from_str(input)?._part_two_a().to_string())
 }
+
 pub fn part_2b(input: &str) -> anyhow::Result<String> {
     Ok(Input::from_str(input)?.part_two_b().to_string())
 }
