@@ -16,27 +16,27 @@ struct Claim {
 }
 
 impl Claim {
+    fn right(&self) -> u32 {
+        self.left + self.width
+    }
+    fn bottom(&self) -> u32 {
+        self.top + self.height
+    }
+
     fn coordinates(&self) -> Vec<(u32, u32)> {
         let mut result = Vec::with_capacity((self.height * self.width) as usize);
-        for x in self.left..self.left + self.width {
-            for y in self.top..self.top + self.height {
+        for x in self.left..self.right() {
+            for y in self.top..self.bottom() {
                 result.push((x, y));
             }
         }
         result
     }
 
-    fn has_overlap(&self, other: &Claim) -> bool {
-        let top = self.top.max(other.top);
-        let right = (self.left + self.width).min(other.left + other.width);
-        let bottom = (self.top + self.height).min(other.top + other.height);
-        let left = self.left.max(other.left);
-        left < right && top < bottom
-    }
     fn overlap(&self, other: &Claim) -> Option<Claim> {
         let top = self.top.max(other.top);
-        let right = (self.left + self.width).min(other.left + other.width);
-        let bottom = (self.top + self.height).min(other.top + other.height);
+        let right = self.right().min(other.right());
+        let bottom = self.bottom().min(other.bottom());
         let left = self.left.max(other.left);
         if right <= left || bottom <= top {
             return None;
@@ -76,7 +76,7 @@ impl Input {
         let mut candidates: HashSet<_> = self.claims.keys().cloned().collect();
         for (id1, claim1) in self.claims.iter() {
             for (id2, claim2) in self.claims.iter() {
-                if id1 != id2 && claim1.has_overlap(claim2) {
+                if id1 != id2 && claim1.overlap(claim2).is_some() {
                     candidates.remove(id1);
                     candidates.remove(id2);
                 }
