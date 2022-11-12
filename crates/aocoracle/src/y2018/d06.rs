@@ -1,24 +1,19 @@
-use std::cmp::Ordering;
-
 use std::str::FromStr;
 
+use crate::itersum::unambiguous_argmin;
 use anyhow::anyhow;
 use hashbrown::HashSet;
 use itertools::{Itertools, MinMaxResult};
 
-struct Grid<T> {
+struct Rectangle {
     left: usize,
     top: usize,
     width: usize,
     height: usize,
-    pub data: Vec<T>,
 }
 
-impl<T> Grid<T>
-where
-    T: Clone,
-{
-    fn from_coordinates(coordinates: &[(usize, usize)], default: T) -> Self {
+impl Rectangle {
+    fn from_coordinates(coordinates: &[(usize, usize)]) -> Self {
         let (left, right) = match coordinates.iter().map(|(x, _)| x).minmax() {
             MinMaxResult::NoElements => {
                 panic!("Expected at least one coordinate")
@@ -30,65 +25,70 @@ where
             MinMaxResult::NoElements => {
                 panic!("Expected at least one coordinate")
             }
-            MinMaxResult::OneElement(x) => (*x, *x),
+            MinMaxResult::OneElement(y) => (*y, *y),
             MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
         };
         let width = right - left + 1;
         let height = bottom - top + 1;
-        let area = width * height;
         Self {
             left,
             top,
             width,
             height,
-            data: vec![default; area],
         }
     }
 
-    // I wanted to try implementing this as an iterator with mutable references but I think this may
-    // be impossible using safe rust.
-    fn apply<F>(&mut self, f: F)
-    where
-        F: Fn(usize, usize, &mut T),
-    {
-        for (i, value) in self.data.iter_mut().enumerate() {
-            let x = self.left + i % self.width;
-            let y = self.top + i / self.width;
-            f(x, y, value);
-        }
+    fn area(&self) -> usize {
+        self.width * self.height
     }
 
-    // I wanted to try implementing this as an iterator but found no good way to track the state.
-    // When collecting the indices to a vector it takes twice the time of the for each
-    // implementation.
-    // It seems it should be possible to avoid collecting the indices by using chain but so far I
-    // have been unsuccessful.
-    // Besides, iterators are a lot of boilerplate.
-    fn foreach_border_value<F>(&mut self, mut f: F)
-    where
-        F: FnMut(&T),
-    {
-        for col in 0..self.width {
-            for row in [0, self.height - 1] {
-                f(&self.data[col + row * self.width]);
-            }
-        }
-        for row in 0..self.height {
-            for col in [0, self.width - 1] {
-                f(&self.data[col + row * self.width]);
-            }
-        }
+    fn coordinates(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
+        (0..self.area()).map(|i| (self.left + i % self.width, self.top + i / self.width))
     }
 }
 
-impl Grid<(usize, Option<u8>)> {
+struct Grid<T> {
+    shape: Rectangle,
+    data: Vec<T>,
+}
+
+impl<T> Grid<T>
+where
+    T: Clone,
+{
+    fn from_coordinates<F>(coordinates: &[(usize, usize)], f: F) -> Self
+    where
+        F: Fn((usize, usize)) -> T,
+    {
+        let shape = Rectangle::from_coordinates(coordinates);
+        let data = shape.coordinates().map(f).collect();
+        Self { shape, data }
+    }
+
+    fn border_values(&mut self) -> impl Iterator<Item = &T> {
+        let mut result = Vec::with_capacity(2 * self.shape.width + 2 * self.shape.height - 2);
+        for col in 0..self.shape.width {
+            for row in [0, self.shape.height - 1] {
+                result.push(&self.data[col + row * self.shape.width]);
+            }
+        }
+        for row in 0..self.shape.height {
+            for col in [0, self.shape.width - 1] {
+                result.push(&self.data[col + row * self.shape.width]);
+            }
+        }
+        result.into_iter()
+    }
+}
+
+impl Grid<Option<u8>> {
     fn _print(&self, coordinates: &[(usize, usize)]) {
         let coordinates: HashSet<_> = coordinates.iter().collect();
-        let mut line = String::with_capacity(self.width);
-        for (i, (_, label)) in self.data.iter().enumerate() {
-            let x = self.left + i % self.width;
-            let y = self.top + i / self.width;
-            if x == self.left {
+        let mut line = String::with_capacity(self.shape.width);
+        for (i, label) in self.data.iter().enumerate() {
+            let x = self.shape.left + i % self.shape.width;
+            let y = self.shape.top + i / self.shape.width;
+            if x == self.shape.left {
                 println!("{}", line);
                 line.clear();
             }
@@ -109,38 +109,25 @@ impl Grid<(usize, Option<u8>)> {
 
 #[derive(Debug)]
 struct Input {
-    coordinates: Vec<(usize, usize)>,
+    pub coordinates: Vec<(usize, usize)>,
 }
 
 impl Input {
     fn try_part_one(&self) -> anyhow::Result<usize> {
-        let mut grid = Grid::from_coordinates(&self.coordinates, (usize::MAX, None));
-        grid.apply(|x, y, old| {
-            for (new_label, c) in self.coordinates.iter().enumerate() {
-                let new_distance = x.abs_diff(c.0) + y.abs_diff(c.1);
-                match new_distance.cmp(&old.0) {
-                    Ordering::Less => {
-                        *old = (new_distance, Some(new_label as u8));
-                    }
-                    Ordering::Equal => {
-                        *old = (new_distance, None);
-                    }
-                    Ordering::Greater => {}
-                };
-            }
+        let mut grid = Grid::from_coordinates(&self.coordinates, |(x, y)| {
+            unambiguous_argmin(
+                self.coordinates
+                    .iter()
+                    .enumerate()
+                    .map(|(l, c)| (Some(l as u8), x.abs_diff(c.0) + y.abs_diff(c.1))),
+            )
+            .unwrap_or(None)
         });
 
-        // An iterator may be nicer but is annoying to implement.
-        // Returning a list with border values feels wasteful.
-        let mut infinites: HashSet<u8> = HashSet::new();
-        grid.foreach_border_value(|(_, l)| {
-            if let Some(l) = l {
-                infinites.insert(*l);
-            }
-        });
+        let infinite_areas: HashSet<u8> = grid.border_values().flatten().cloned().collect();
 
-        let mut finite_areas = grid.data.iter().flat_map(|(_, l)| l).counts();
-        finite_areas.retain(|k, _| !infinites.contains(k));
+        let mut finite_areas = grid.data.into_iter().flatten().counts();
+        finite_areas.retain(|k, _| !infinite_areas.contains(k));
 
         finite_areas
             .into_values()
@@ -149,12 +136,11 @@ impl Input {
     }
 
     fn part_two_x(&self, threshold: usize) -> usize {
-        let mut grid = Grid::from_coordinates(&self.coordinates, 0);
-        grid.apply(|x, y, old| {
-            for c in self.coordinates.iter() {
-                let marginal_distance = x.abs_diff(c.0) + y.abs_diff(c.1);
-                *old += marginal_distance;
-            }
+        let grid = Grid::from_coordinates(&self.coordinates, |(x, y)| {
+            self.coordinates
+                .iter()
+                .map(|c| x.abs_diff(c.0) + y.abs_diff(c.1))
+                .sum::<usize>()
         });
         grid.data.into_iter().filter(|d| *d < threshold).count()
     }
