@@ -1,75 +1,83 @@
-use std::cmp::Reverse;
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::str::FromStr;
 
 use anyhow::{anyhow, bail};
-use hashbrown::{HashMap, HashSet};
+use hashbrown::HashMap;
 use itertools::Itertools;
 
-struct Planner<T> {
-    ready: HashSet<T>,
-    started: HashSet<T>,
-    succ2precs: HashMap<T, HashSet<T>>,
-}
+mod dag {
+    use std::fmt::Debug;
+    use std::hash::Hash;
 
-impl<T> Planner<T>
-where
-    T: Copy + Eq + Hash + Debug,
-{
-    pub fn new(mut succ2precs: HashMap<T, HashSet<T>>) -> Self {
-        let ready = succ2precs
-            .drain_filter(|_, precs| precs.is_empty())
-            .map(|(succ, _)| succ)
-            .collect();
-        Self {
-            ready,
-            started: HashSet::new(),
-            succ2precs,
-        }
+    use anyhow::{anyhow, bail};
+    use hashbrown::{HashMap, HashSet};
+
+    pub struct Graph<T> {
+        succ2precs: HashMap<T, HashSet<T>>,
     }
 
-    pub fn start_task(&mut self, node: &T) -> anyhow::Result<()> {
-        if let Some(node) = self.ready.take(node) {
-            self.started.insert(node);
-        } else {
-            bail!("Cannot start task if it is not ready")
-        }
-        Ok(())
-    }
-
-    pub fn complete_task(&mut self, node: &T) -> anyhow::Result<()> {
-        if !self.started.remove(node) {
-            bail!("Cannot complete task if it is not started")
-        }
-        println!("Marking {node:?} as done");
-        for (succ, precs) in self.succ2precs.iter_mut() {
-            if precs.remove(node) {
-                println!("Removed prec {:?} to succ {:?}", node, succ);
+    impl<T: Copy + Eq + Hash + Debug> Graph<T> {
+        pub fn new() -> Self {
+            Self {
+                succ2precs: HashMap::new(),
             }
         }
-        for (succ, _) in self.succ2precs.drain_filter(|_, precs| precs.is_empty()) {
-            self.ready.insert(succ);
-            println!("Moved succ {:?} to ready", succ);
+
+        pub fn insert_edge(&mut self, prec: T, succ: T) {
+            self.succ2precs.entry(succ).or_default().insert(prec);
+            self.succ2precs.entry(prec).or_default();
         }
-        Ok(())
+
+        pub fn into_planner(self) -> Planner<T> {
+            Planner::new(self.succ2precs)
+        }
     }
 
-    pub fn is_done(&self) -> bool {
-        self.succ2precs.is_empty() && self.ready.is_empty()
+    pub struct Planner<T> {
+        succ2precs: HashMap<T, HashSet<T>>,
+        ready: HashSet<T>,
+        started: HashSet<T>,
     }
-}
 
-impl<T> Planner<T>
-where
-    T: Copy + Ord,
-{
-    pub fn try_first_ready(&self) -> anyhow::Result<T> {
-        Ok(*self
-            .ready
-            .iter()
-            .max_by_key(|k| Reverse(*k))
-            .ok_or_else(|| anyhow!("Graph has at least one cycle"))?)
+    impl<T: Eq + Hash + Debug> Planner<T> {
+        pub fn new(mut succ2precs: HashMap<T, HashSet<T>>) -> Self {
+            let ready = succ2precs
+                .drain_filter(|_, precs| precs.is_empty())
+                .map(|(succ, _)| succ)
+                .collect();
+            Self {
+                succ2precs,
+                ready,
+                started: HashSet::new(),
+            }
+        }
+
+        pub fn ready(&self) -> &HashSet<T> {
+            &self.ready
+        }
+
+        pub fn start(&mut self, task: &T) -> anyhow::Result<()> {
+            let task = self
+                .ready
+                .take(task)
+                .ok_or_else(|| anyhow!("Cannot start task {task:?} because it is not ready"))?;
+            self.started.insert(task);
+            Ok(())
+        }
+
+        pub fn complete(&mut self, task: &T) -> anyhow::Result<()> {
+            if !self.started.remove(task) {
+                bail!("Cannot complete task {task:?} because is not started")
+            }
+            self.succ2precs.values_mut().for_each(|precs| {
+                precs.remove(task);
+            });
+            self.ready.extend(
+                self.succ2precs
+                    .drain_filter(|_, precs| precs.is_empty())
+                    .map(|(succ, _)| succ),
+            );
+            Ok(())
+        }
     }
 }
 
@@ -77,11 +85,7 @@ struct Executor {
     now: u16,
     base_duration: u16,
     capacity: usize,
-    tasks: HashMap<u8, u16>,
-}
-
-fn first<T, U>(tuple: (T, U)) -> T {
-    tuple.0
+    tasks: HashMap<Task, u16>,
 }
 
 impl Executor {
@@ -94,74 +98,92 @@ impl Executor {
         }
     }
 
-    fn is_full(&self) -> bool {
-        self.capacity == self.tasks.len()
+    fn start(&mut self, task: Task) -> Result<(), ()> {
+        if self.capacity == self.tasks.len() {
+            return Err(());
+        }
+        let end_time = self.now + self.base_duration + task.duration();
+        self.tasks.insert(task, end_time);
+        Ok(())
     }
 
-    fn start_task(&mut self, task: u8) {
-        let now = self.now;
-        let end_time = now + task as u16 + self.base_duration - 64;
-        println!("Starting {task} at {now} lasting until {end_time}");
-        self.tasks.insert(task, end_time);
+    fn drain_completed(&mut self) -> impl Iterator<Item = Task> + '_ {
+        if let Some(&now) = self.tasks.values().min() {
+            self.now = now;
+        }
+        self.tasks
+            .drain_filter(|_, end_time| *end_time == self.now)
+            .map(|(task, _)| task)
     }
-    fn remove_done(&mut self) -> anyhow::Result<Vec<u8>> {
-        let now = *self
-            .tasks
-            .values()
-            .min()
-            .ok_or_else(|| anyhow!("No tasks done"))?;
-        self.now = now;
-        let tasks = self
-            .tasks
-            .drain_filter(|_task, end_time| *end_time == self.now)
-            .map(first)
-            .collect();
-        println!("Stopped {tasks:?} at {now}");
-        Ok(tasks)
-    }
+
     fn now(self) -> u16 {
         self.now
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct Task(u8);
+
+impl Task {
+    fn duration(&self) -> u16 {
+        self.0 as u16 - 64
+    }
+}
+
+impl TryFrom<char> for Task {
+    type Error = anyhow::Error;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        if !value.is_ascii_uppercase() {
+            bail!("Expected ascii upercase char but got {value}");
+        }
+        Ok(Self(
+            value
+                .try_into()
+                .expect("Uppercase ascii is can be converted to u8"),
+        ))
+    }
+}
+
+impl From<Task> for char {
+    fn from(task: Task) -> Self {
+        task.0 as char
+    }
+}
+
 struct Input {
-    pub graph: HashMap<u8, HashSet<u8>>,
+    pub graph: dag::Graph<Task>,
 }
 
 impl Input {
     fn try_part_one(self) -> anyhow::Result<String> {
-        let mut planner = Planner::new(self.graph);
+        let mut planner = self.graph.into_planner();
         let mut result = String::new();
-        while !planner.is_done() {
-            let node = planner.try_first_ready()?;
-            result.push(node as char);
-            planner.start_task(&node).unwrap();
-            planner.complete_task(&node).unwrap();
+        while let Some(&task) = planner.ready().iter().min() {
+            planner.start(&task).unwrap();
+            planner.complete(&task).unwrap();
+            result.push(task.into());
         }
         Ok(result)
     }
 
     fn try_part_two(self, num_worker: usize, base_duration: u16) -> anyhow::Result<String> {
-        let mut planner = Planner::new(self.graph);
+        let mut planner = self.graph.into_planner();
         let mut executor = Executor::new(base_duration, num_worker);
-
-        let mut result = String::new();
-        while !planner.is_done() {
-            println!("Result: {result}");
-            while !executor.is_full() {
-                if let Ok(node) = planner.try_first_ready() {
-                    planner.start_task(&node).unwrap();
-                    executor.start_task(node);
-                } else {
+        loop {
+            while let Some(&task) = planner.ready().iter().min() {
+                if executor.start(task).is_err() {
                     break;
                 }
+                planner.start(&task).unwrap();
             }
 
-            for task in executor.remove_done()? {
-                result.push(task as char);
-                println!("Task: {task}");
-                planner.complete_task(&task)?;
+            let mut completed_tasks = executor.drain_completed().peekable();
+            if completed_tasks.peek().is_none() {
+                break; // Either done or encountered a cycle
+            }
+            for task in completed_tasks {
+                planner.complete(&task)?;
             }
         }
         Ok(executor.now().to_string())
@@ -172,7 +194,7 @@ impl FromStr for Input {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut graph: HashMap<u8, HashSet<u8>> = HashMap::new();
+        let mut graph = dag::Graph::new();
         let re =
             regex::Regex::new(r"^Step ([A-Z]) must be finished before step ([A-Z]) can begin.$")
                 .expect("Hard coded regex is valid");
@@ -184,14 +206,15 @@ impl FromStr for Input {
                 .chars()
                 .exactly_one()
                 .expect("Regex matches exactly one char")
-                .try_into()?;
+                .try_into()
+                .expect("Regex matches valid task");
             let successor = cap[2]
                 .chars()
                 .exactly_one()
                 .expect("Regex matches exactly one char")
-                .try_into()?;
-            graph.entry(predecessor).or_default();
-            graph.entry(successor).or_default().insert(predecessor);
+                .try_into()
+                .expect("Regex matches valid task");
+            graph.insert_edge(predecessor, successor);
         }
         Ok(Self { graph })
     }
