@@ -124,57 +124,46 @@ fn _carbon_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input, expected_answer};
+    use crate::testing::{
+        actual_answer, assert_correct_answer_on_correct_input, assert_error_on_wrong_input,
+    };
     use crate::Part;
 
-    fn assert_correct_answer(part: Part, stem: &str) {
-        assert_eq!(
-            actual_answer(
-                file!(),
-                match part {
-                    Part::One => part_1,
-                    Part::Two => part_2,
-                },
-                stem,
-            ),
-            expected_answer(file!(), part, stem).unwrap(),
-        )
-    }
+    use super::*;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer(Part::One, "example");
+        assert_correct_answer_on_correct_input!(part_1, "example", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer(Part::One, "6bb0c0bd67");
+        assert_correct_answer_on_correct_input!(part_1, "6bb0c0bd67", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer(Part::Two, "example");
+        assert_correct_answer_on_correct_input!(part_2, "example", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer(Part::Two, "6bb0c0bd67");
-    }
-
-    #[test]
-    fn oxygen_works_on_example() {
-        assert_eq!(actual_answer(file!(), _oxygen_only, "example"), 23);
-    }
-
-    #[test]
-    fn carbon_works_on_example() {
-        assert_eq!(actual_answer(file!(), _carbon_only, "example"), 10);
+        assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
     }
 
     #[ignore]
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
+        assert_error_on_wrong_input!(&part_1, &part_2);
+    }
+
+    #[test]
+    fn oxygen_works_on_example() {
+        assert_eq!(actual_answer(file!(), _oxygen_only, "example").unwrap(), 23);
+    }
+
+    #[test]
+    fn carbon_works_on_example() {
+        assert_eq!(actual_answer(file!(), _carbon_only, "example").unwrap(), 10);
     }
 }

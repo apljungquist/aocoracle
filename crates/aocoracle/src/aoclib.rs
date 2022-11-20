@@ -224,7 +224,7 @@ pub fn helper_text(args: &Cli, text: &str) -> anyhow::Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::{available_inputs, expected_answer2, read_input};
+    use crate::testing::{available_inputs, expected_answer, read_input};
     use itertools::Itertools;
     use std::fmt::Display;
     use std::panic;
@@ -332,7 +332,7 @@ mod tests {
             for (solver_year, solver_day, part) in _available_solvers().into_keys() {
                 let solver_key = || format!("{solver_year}/{solver_day:02}::{part}");
                 let correct_key = input_year == solver_year && input_day == solver_day;
-                let expected_answer = expected_answer2(input_year, input_day, part, &stem);
+                let expected_answer = expected_answer(input_year, input_day, part, &stem);
                 let actual_answer = actual_answers.remove(&(solver_year, solver_day, part));
                 match (correct_key, actual_answer, expected_answer) {
                     (false, None, _) => {
@@ -419,7 +419,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (85, 0, 108, 2, 0, 2, num_input * num_solver),
+            (104, 0, 108, 2, 0, 2, num_input * num_solver),
         );
         Ok(())
     }

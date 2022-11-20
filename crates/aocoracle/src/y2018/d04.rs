@@ -92,46 +92,33 @@ pub fn part_2(input: &str) -> anyhow::Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testing::{actual_answer2, assert_returns_error_on_wrong_input2, expected_answer};
+    use crate::testing::{assert_correct_answer_on_correct_input, assert_error_on_wrong_input};
     use crate::Part;
 
-    fn assert_correct_answer(part: Part, stem: &str) {
-        assert_eq!(
-            actual_answer2(
-                file!(),
-                match part {
-                    Part::One => part_1,
-                    Part::Two => part_2,
-                },
-                stem,
-            ),
-            expected_answer(file!(), part, stem).unwrap(),
-        )
-    }
+    use super::*;
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer(Part::One, "example");
+        assert_correct_answer_on_correct_input!(part_1, "example", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer(Part::One, "3ba7923eae");
+        assert_correct_answer_on_correct_input!(part_1, "3ba7923eae", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer(Part::Two, "example");
+        assert_correct_answer_on_correct_input!(part_2, "example", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer(Part::Two, "3ba7923eae");
+        assert_correct_answer_on_correct_input!(part_2, "3ba7923eae", Part::Two);
     }
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_returns_error_on_wrong_input2(file!(), &part_1, &part_2);
+        assert_error_on_wrong_input!(part_1, part_2);
     }
 }

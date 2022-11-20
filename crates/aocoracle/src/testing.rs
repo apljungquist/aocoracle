@@ -1,12 +1,13 @@
-use crate::{AnyError, Part, Solver, Solver2};
-use anyhow::anyhow;
+use crate::Part;
 use glob::glob;
+use std::any::type_name;
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 use std::fs;
 
 type Answers = BTreeMap<u16, BTreeMap<u8, BTreeMap<Part, BTreeMap<String, String>>>>;
 
-fn _year_day(file: &str) -> (u16, u8) {
+fn year_day(file: &str) -> (u16, u8) {
     let re = regex::Regex::new(r"y(\d{4})/d(\d{2})").expect("Hard coded regex is valid");
     let cap = re.captures(file).unwrap();
     let year = cap[1].parse::<u16>().unwrap();
@@ -52,20 +53,12 @@ pub fn available_inputs() -> Vec<(u16, u8, String)> {
     result
 }
 
-pub fn actual_answer<F, T>(file: &str, func: F, stem: &str) -> T
+pub fn actual_answer<F, T, U>(file: &str, func: F, stem: &str) -> Result<T, U>
 where
-    F: Fn(&str) -> Result<T, AnyError>,
+    F: Fn(&str) -> Result<T, U>,
 {
-    let (year, day) = _year_day(file);
-    func(&read_input(year, day, stem)).unwrap()
-}
-
-pub fn actual_answer2<F, T>(file: &str, func: F, stem: &str) -> T
-where
-    F: Fn(&str) -> anyhow::Result<T>,
-{
-    let (year, day) = _year_day(file);
-    func(&read_input(year, day, stem)).unwrap()
+    let (year, day) = year_day(file);
+    func(&read_input(year, day, stem))
 }
 
 fn read_answers() -> Answers {
@@ -73,51 +66,56 @@ fn read_answers() -> Answers {
     serde_json::from_str(text).unwrap()
 }
 
-pub fn expected_answer2(year: u16, day: u8, part: Part, stem: &str) -> Option<String> {
+pub fn expected_answer(year: u16, day: u8, part: Part, stem: &str) -> Option<String> {
     let answers = read_answers();
     Some(answers.get(&year)?.get(&day)?.get(&part)?.get(stem)?.into())
 }
 
-pub fn expected_answer(file: &str, part: Part, stem: &str) -> Option<String> {
-    let (year, day) = _year_day(file);
-    expected_answer2(year, day, part, stem)
-}
-
-fn _available_answers() -> Vec<(u16, u8, Part, String)> {
-    let mut result = Vec::new();
-    let answers = read_answers();
-    for (year, days) in answers.into_iter() {
-        for (day, parts) in days.into_iter() {
-            for (part, names) in parts.into_iter() {
-                for name in names.keys() {
-                    result.push((year, day, part, name.clone()));
-                }
-            }
-        }
-    }
-    result
-}
-
-pub fn assert_returns_error_on_wrong_input(
+pub fn assert_correct_answer_on_correct_input_given_file<F, U>(
     file: &str,
-    part_1: &'static Solver,
-    part_2: &'static Solver,
-) {
-    assert_returns_error_on_wrong_input2(
-        file,
-        &|s| part_1(s).map_err(|err| anyhow!("{err}")),
-        &|s| part_2(s).map_err(|err| anyhow!("{err}")),
-    );
+    func: F,
+    part: Part,
+    stem: &str,
+) where
+    F: Fn(&str) -> Result<String, U>,
+    U: Debug,
+{
+    let (year, day) = year_day(file);
+    assert_eq!(
+        actual_answer(file, func, stem).unwrap(),
+        expected_answer(year, day, part, stem).unwrap(),
+    )
 }
 
-pub fn assert_returns_error_on_wrong_input2(file: &str, part_1: &Solver2, part_2: &Solver2) {
-    let (skip_year, skip_day) = _year_day(file);
+pub fn assert_error_on_wrong_input_given_file<F, T, U>(file: &str, func: F)
+where
+    F: Fn(&str) -> Result<T, U>,
+{
+    let (skip_year, skip_day) = year_day(file);
     for (year, day, stem) in available_inputs() {
         if year == skip_year && day == skip_day {
             continue;
         }
-        println!("y{} d{} {}", year, day, stem);
-        assert!(part_1(&read_input(year, day, &stem)).is_err());
-        assert!(part_2(&read_input(year, day, &stem)).is_err());
+        println!("{} y{} d{} {}", type_name::<F>(), year, day, stem);
+        assert!(func(&read_input(year, day, &stem)).is_err());
     }
 }
+
+macro_rules! assert_correct_answer_on_correct_input {
+    ($func:expr, $stem:expr, $part:expr) => {
+        $crate::testing::assert_correct_answer_on_correct_input_given_file(
+            file!(),
+            $func,
+            $part,
+            $stem,
+        )
+    };
+}
+pub(crate) use assert_correct_answer_on_correct_input;
+
+macro_rules! assert_error_on_wrong_input {
+    ($($func:expr),*) => {$(
+        $crate::testing::assert_error_on_wrong_input_given_file(file!(), $func);
+    )*};
+}
+pub(crate) use assert_error_on_wrong_input;

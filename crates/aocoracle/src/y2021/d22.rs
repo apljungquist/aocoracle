@@ -132,48 +132,41 @@ pub fn part_2(input: &str) -> Result<String, Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input};
+    use crate::testing::{assert_correct_answer_on_correct_input, assert_error_on_wrong_input};
+    use crate::Part;
 
     use super::*;
 
     #[test]
     fn part_1_works_on_example_s() {
-        assert_eq!(actual_answer(file!(), part_1, "example_s"), "39");
+        assert_correct_answer_on_correct_input!(part_1, "example_s", Part::One);
     }
-
     #[test]
     fn part_1_works_on_example_m() {
-        assert_eq!(actual_answer(file!(), part_1, "example_m"), "590784");
+        assert_correct_answer_on_correct_input!(part_1, "example_m", Part::One);
     }
-
     #[test]
     fn part_1_works_on_example_l() {
-        assert_eq!(actual_answer(file!(), part_1, "example_l"), "474140");
+        assert_correct_answer_on_correct_input!(part_1, "example_l", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(actual_answer(file!(), part_1, "6bb0c0bd67"), "527915");
+        assert_correct_answer_on_correct_input!(part_1, "6bb0c0bd67", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example_l() {
-        assert_eq!(
-            actual_answer(file!(), part_2, "example_l"),
-            "2758514936282235"
-        );
+        assert_correct_answer_on_correct_input!(part_2, "example_l", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(
-            actual_answer(file!(), part_2, "6bb0c0bd67"),
-            "1218645427221987"
-        );
+        assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
     }
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
+        assert_error_on_wrong_input!(&part_1, &part_2);
     }
 }

@@ -94,37 +94,36 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     .unwrap()
     .to_string())
 }
-
 #[cfg(test)]
 mod tests {
+    use crate::testing::{assert_correct_answer_on_correct_input, assert_error_on_wrong_input};
+    use crate::Part;
+
     use super::*;
-    use crate::testing::{actual_answer, assert_returns_error_on_wrong_input};
 
     #[test]
     fn part_1_works_on_example() {
-        assert_eq!(actual_answer(file!(), part_1, "example"), "739785");
+        assert_correct_answer_on_correct_input!(part_1, "example", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_eq!(actual_answer(file!(), part_1, "6bb0c0bd67"), "916083");
+        assert_correct_answer_on_correct_input!(part_1, "6bb0c0bd67", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_eq!(actual_answer(file!(), part_2, "example"), "444356092776315");
+        assert_correct_answer_on_correct_input!(part_2, "example", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_eq!(
-            actual_answer(file!(), part_2, "6bb0c0bd67"),
-            "49982165861983"
-        );
+        assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
     }
 
+    #[ignore]
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_returns_error_on_wrong_input(file!(), &part_1, &part_2);
+        assert_error_on_wrong_input!(&part_1, &part_2);
     }
 }
