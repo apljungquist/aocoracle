@@ -1,58 +1,15 @@
 use hashbrown::HashSet;
 use std::collections::HashMap;
-use std::hash::Hash;
+
 use std::str::FromStr;
 
 use itertools::Itertools;
 
+use crate::rect::Rectangle;
 use crate::AnyError;
 
-#[derive(Clone, Debug, Hash)]
-struct Claim {
-    left: u32,
-    top: u32,
-    width: u32,
-    height: u32,
-}
-
-impl Claim {
-    fn right(&self) -> u32 {
-        self.left + self.width
-    }
-    fn bottom(&self) -> u32 {
-        self.top + self.height
-    }
-
-    fn coordinates(&self) -> Vec<(u32, u32)> {
-        let mut result = Vec::with_capacity((self.height * self.width) as usize);
-        for x in self.left..self.right() {
-            for y in self.top..self.bottom() {
-                result.push((x, y));
-            }
-        }
-        result
-    }
-
-    fn overlap(&self, other: &Claim) -> Option<Claim> {
-        let top = self.top.max(other.top);
-        let right = self.right().min(other.right());
-        let bottom = self.bottom().min(other.bottom());
-        let left = self.left.max(other.left);
-        if right <= left || bottom <= top {
-            return None;
-        }
-        let result = Self {
-            left,
-            top,
-            width: right - left,
-            height: bottom - top,
-        };
-        Some(result)
-    }
-}
-
 struct Input {
-    claims: HashMap<usize, Claim>,
+    claims: HashMap<usize, Rectangle<u32>>,
 }
 
 impl Input {
@@ -64,8 +21,8 @@ impl Input {
                 if id1 == id2 {
                     continue;
                 }
-                if let Some(overlap) = claim1.overlap(claim2) {
-                    contended.extend(overlap.coordinates());
+                if let Some(overlap) = claim1.intersection(claim2) {
+                    contended.extend(overlap.tiles());
                 }
             }
         }
@@ -76,7 +33,7 @@ impl Input {
         let mut candidates: HashSet<_> = self.claims.keys().cloned().collect();
         for (id1, claim1) in self.claims.iter() {
             for (id2, claim2) in self.claims.iter() {
-                if id1 != id2 && claim1.overlap(claim2).is_some() {
+                if id1 != id2 && claim1.intersection(claim2).is_some() {
                     candidates.remove(id1);
                     candidates.remove(id2);
                 }
@@ -100,12 +57,12 @@ impl FromStr for Input {
 
             claims.insert(
                 cap[1].parse::<usize>()?,
-                Claim {
-                    left: cap[2].parse::<u32>()?,
-                    top: cap[3].parse::<u32>()?,
-                    width: cap[4].parse::<u32>()?,
-                    height: cap[5].parse::<u32>()?,
-                },
+                Rectangle::<u32>::new(
+                    cap[2].parse::<u32>()?,
+                    cap[3].parse::<u32>()?,
+                    cap[4].parse::<u32>()?,
+                    cap[5].parse::<u32>()?,
+                ),
             );
         }
         Ok(Self { claims })

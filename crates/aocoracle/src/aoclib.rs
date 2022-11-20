@@ -6,6 +6,7 @@ use std::str::FromStr;
 use structopt::StructOpt;
 
 mod itersum;
+mod rect;
 #[cfg(test)]
 mod testing;
 mod y2018;

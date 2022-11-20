@@ -1,54 +1,32 @@
 use std::str::FromStr;
 
 use crate::itersum::unambiguous_argmin;
+use crate::rect::Rectangle;
 use anyhow::anyhow;
 use hashbrown::HashSet;
 use itertools::{Itertools, MinMaxResult};
-
-struct Rectangle {
-    left: usize,
-    top: usize,
-    width: usize,
-    height: usize,
-}
-
-impl Rectangle {
-    fn from_coordinates(coordinates: &[(usize, usize)]) -> Self {
-        let (left, right) = match coordinates.iter().map(|(x, _)| x).minmax() {
-            MinMaxResult::NoElements => {
-                panic!("Expected at least one coordinate")
-            }
-            MinMaxResult::OneElement(x) => (*x, *x),
-            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
-        };
-        let (top, bottom) = match coordinates.iter().map(|(_, y)| y).minmax() {
-            MinMaxResult::NoElements => {
-                panic!("Expected at least one coordinate")
-            }
-            MinMaxResult::OneElement(y) => (*y, *y),
-            MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
-        };
-        let width = right - left + 1;
-        let height = bottom - top + 1;
-        Self {
-            left,
-            top,
-            width,
-            height,
+fn bounding_box(coordinates: &[(usize, usize)]) -> Rectangle<usize> {
+    let (left, right) = match coordinates.iter().map(|(x, _)| x).minmax() {
+        MinMaxResult::NoElements => {
+            panic!("Expected at least one coordinate")
         }
-    }
-
-    fn area(&self) -> usize {
-        self.width * self.height
-    }
-
-    fn coordinates(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
-        (0..self.area()).map(|i| (self.left + i % self.width, self.top + i / self.width))
-    }
+        MinMaxResult::OneElement(x) => (*x, *x),
+        MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
+    };
+    let (top, bottom) = match coordinates.iter().map(|(_, y)| y).minmax() {
+        MinMaxResult::NoElements => {
+            panic!("Expected at least one coordinate")
+        }
+        MinMaxResult::OneElement(y) => (*y, *y),
+        MinMaxResult::MinMax(lo, hi) => (*lo, *hi),
+    };
+    let width = right - left + 1;
+    let height = bottom - top + 1;
+    Rectangle::<usize>::new(left, top, width, height)
 }
 
 struct Grid<T> {
-    shape: Rectangle,
+    shape: Rectangle<usize>,
     data: Vec<T>,
 }
 
@@ -60,8 +38,8 @@ where
     where
         F: Fn((usize, usize)) -> T,
     {
-        let shape = Rectangle::from_coordinates(coordinates);
-        let data = shape.coordinates().map(f).collect();
+        let shape = bounding_box(coordinates);
+        let data = shape.tiles().map(f).collect();
         Self { shape, data }
     }
 
