@@ -1,4 +1,5 @@
 use anyhow::{anyhow, bail};
+
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
@@ -81,19 +82,25 @@ impl Cli {
 }
 
 pub type AnyError = Box<dyn std::error::Error>;
-type Solver = dyn Fn(&str) -> Result<String, AnyError>;
-type Solver2 = dyn Fn(&str) -> anyhow::Result<String>;
+type Solver = dyn Fn(&str) -> anyhow::Result<String>;
 
-fn boxed(func: &'static Solver) -> Box<Solver2> {
+fn boxed<F>(func: &'static F) -> Box<Solver>
+where
+    F: Fn(&str) -> Result<String, AnyError>,
+{
     Box::new(move |s| func(s).map_err(|err| anyhow!("{err:}")))
 }
 
-fn boxed2(func: &'static Solver2) -> Box<Solver2> {
-    Box::new(func)
+fn boxed2<F, T>(func: &'static F) -> Box<Solver>
+where
+    F: Fn(&str) -> anyhow::Result<T>,
+    T: ToString,
+{
+    Box::new(move |s| func(s).map(|ok| ok.to_string()))
 }
 
-fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver2>> {
-    let mut functions: BTreeMap<_, Box<Solver2>> = BTreeMap::new();
+fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver>> {
+    let mut functions: BTreeMap<_, Box<Solver>> = BTreeMap::new();
     functions.insert((2018, 1, Part::One), boxed(&y2018::d01::part_1));
     functions.insert((2018, 1, Part::Two), boxed(&y2018::d01::part_2));
     functions.insert((2018, 2, Part::One), boxed(&y2018::d02::part_1));
@@ -142,7 +149,7 @@ fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver2>> {
     functions
 }
 
-fn _candidates(args: &Cli) -> anyhow::Result<BTreeMap<(u16, u8, Part), Box<Solver2>>> {
+fn _candidates(args: &Cli) -> anyhow::Result<BTreeMap<(u16, u8, Part), Box<Solver>>> {
     let mut functions = _available_solvers();
     let mut result = BTreeMap::new();
     let parts: Vec<Part> = match args.part {

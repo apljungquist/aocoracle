@@ -1,11 +1,4 @@
-use std::str::FromStr;
-
 use anyhow::anyhow;
-
-#[derive(Debug)]
-struct Input {
-    polymer: Vec<u8>,
-}
 
 fn same_type_opposite_polarity(left: u8, right: u8) -> bool {
     left.abs_diff(right) == 32
@@ -36,44 +29,30 @@ fn reduced_without_unit_type(polymer: &[u8], unit_type: u8) -> Vec<u8> {
     reduced(polymer)
 }
 
-impl Input {
-    fn try_part_one(&self) -> anyhow::Result<usize> {
-        Ok(reduced(self.polymer.clone()).len())
-    }
-
-    fn try_part_two(&self) -> anyhow::Result<usize> {
-        let initial = reduced(self.polymer.clone());
-        if initial.is_empty() {
-            log::warn!("Polymer fully reduced before part 2");
-            return Ok(0);
-        }
-        Ok((65..=90)
-            .map(|u| reduced_without_unit_type(&initial, u).len())
-            .min()
-            .expect("Hard coded range is not empty"))
-    }
+fn polymer_from_str(s: &str) -> anyhow::Result<Vec<u8>> {
+    let re = regex::Regex::new(r"(?m)\A([A-Za-z]+)\n\z").expect("Hard coded regex is valid");
+    let cap = re
+        .captures(s)
+        .ok_or_else(|| anyhow!("Regex \"{re:?}\" could not capture text {s:?}"))?;
+    Ok(cap[1].bytes().collect())
 }
 
-impl FromStr for Input {
-    type Err = anyhow::Error;
+pub fn part_1(input: &str) -> anyhow::Result<usize> {
+    let polymer = polymer_from_str(input)?;
+    Ok(reduced(polymer).len())
+}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let re = regex::Regex::new(r"(?m)\A([A-Za-z]+)\n\z").expect("Hard coded regex is valid");
-        let cap = re
-            .captures(s)
-            .ok_or_else(|| anyhow!("Regex \"{re:?}\" could not capture text {s:?}"))?;
-        Ok(Self {
-            polymer: cap[1].bytes().collect(),
-        })
+pub fn part_2(input: &str) -> anyhow::Result<usize> {
+    let polymer = polymer_from_str(input)?;
+    let initial = reduced(polymer);
+    if initial.is_empty() {
+        log::warn!("Polymer fully reduced before part 2");
+        return Ok(0);
     }
-}
-
-pub fn part_1(input: &str) -> anyhow::Result<String> {
-    Ok(Input::from_str(input)?.try_part_one()?.to_string())
-}
-
-pub fn part_2(input: &str) -> anyhow::Result<String> {
-    Ok(Input::from_str(input)?.try_part_two()?.to_string())
+    Ok((65..=90)
+        .map(|u| reduced_without_unit_type(&initial, u).len())
+        .min()
+        .expect("Hard coded range is not empty"))
 }
 
 #[cfg(test)]

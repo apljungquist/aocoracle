@@ -71,18 +71,19 @@ pub fn expected_answer(year: u16, day: u8, part: Part, stem: &str) -> Option<Str
     Some(answers.get(&year)?.get(&day)?.get(&part)?.get(stem)?.into())
 }
 
-pub fn assert_correct_answer_on_correct_input_given_file<F, U>(
+pub fn assert_correct_answer_on_correct_input_given_file<F, T, U>(
     file: &str,
     func: F,
     part: Part,
     stem: &str,
 ) where
-    F: Fn(&str) -> Result<String, U>,
+    F: Fn(&str) -> Result<T, U>,
+    T: ToString,
     U: Debug,
 {
     let (year, day) = year_day(file);
     assert_eq!(
-        actual_answer(file, func, stem).unwrap(),
+        actual_answer(file, func, stem).unwrap().to_string(),
         expected_answer(year, day, part, stem).unwrap(),
     )
 }
