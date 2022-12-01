@@ -1,6 +1,29 @@
 use anyhow::bail;
-use itertools::Itertools;
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
 
+/// Return the `n` greatest items
+pub trait TopN: Iterator {
+    fn top(mut self, n: usize) -> Option<Vec<Self::Item>>
+    where
+        Self: Sized,
+        Self::Item: Ord,
+    {
+        let mut result: BinaryHeap<Reverse<Self::Item>> = BinaryHeap::with_capacity(n);
+        for _ in 0..n {
+            result.push(Reverse(self.next()?));
+        }
+        for item in self {
+            if result.peek()?.0 < item {
+                result.pop();
+                result.push(Reverse(item));
+            }
+        }
+        Some(result.into_sorted_vec().into_iter().map(|r| r.0).collect())
+    }
+}
+
+impl<T: ?Sized> TopN for T where T: Iterator {}
 fn inventories(s: &str) -> anyhow::Result<Vec<Vec<u32>>> {
     let mut result = Vec::new();
     let mut inventory = Vec::new();
@@ -36,21 +59,13 @@ pub fn part_1(input: &str) -> anyhow::Result<u32> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<u32> {
-    let inventory_totals: Vec<_> = inventories(input)?
+    Ok(inventories(input)?
         .into_iter()
         .map(|inventory| inventory.iter().sum::<u32>())
-        .sorted()
-        .rev()
-        .collect();
-    Ok(inventory_totals
-        .first()
+        .top(3)
         .expect("Parsing ensures there are at least three inventories")
-        + inventory_totals
-            .get(1)
-            .expect("Parsing ensures there are at least three inventories")
-        + inventory_totals
-            .get(2)
-            .expect("Parsing ensures there are at least three inventories"))
+        .into_iter()
+        .sum())
 }
 
 #[cfg(test)]
