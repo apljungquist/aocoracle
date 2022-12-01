@@ -13,6 +13,7 @@ mod testing;
 mod y2018;
 mod y2020;
 mod y2021;
+mod y2022;
 
 #[derive(Eq, Ord, PartialEq, PartialOrd, Clone, Copy, Deserialize)]
 pub enum Part {
@@ -148,6 +149,8 @@ fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver>> {
     functions.insert((2021, 24, Part::One), boxed(&y2021::d24::part_1));
     functions.insert((2021, 24, Part::Two), boxed(&y2021::d24::part_2));
     functions.insert((2021, 25, Part::One), boxed(&y2021::d25::part_1));
+    functions.insert((2022, 1, Part::One), boxed2(&y2022::d01::part_1));
+    functions.insert((2022, 1, Part::Two), boxed2(&y2022::d01::part_2));
     functions
 }
 
@@ -167,7 +170,7 @@ fn _candidates(args: &Cli) -> anyhow::Result<BTreeMap<(u16, u8, Part), Box<Solve
     .collect();
 
     let years: Vec<u16> = match args.year {
-        None => 2018..=2021,
+        None => 2018..=2022,
         Some(year) => year..=year,
     }
     .collect();
@@ -428,7 +431,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (108, 0, 108, 2, 0, 2, num_input * num_solver),
+            (112, 0, 108, 2, 0, 2, num_input * num_solver),
         );
         Ok(())
     }
