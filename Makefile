@@ -59,6 +59,11 @@ fix_format:
 	cargo fmt
 .PHONY: fix_format
 
+## _
+fix_lint:
+	cargo clippy --fix
+.PHONY: fix_lint
+
 ## Serve webapp with automatic reloading
 serve-dev: crates/webapp/index.html
 	mkdir -p dist/debug/
