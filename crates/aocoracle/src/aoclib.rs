@@ -159,6 +159,8 @@ fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver>> {
     functions.insert((2022, 4, Part::Two), boxed2(&y2022::d04::part_2));
     functions.insert((2022, 5, Part::One), boxed2(&y2022::d05::part_1));
     functions.insert((2022, 5, Part::Two), boxed2(&y2022::d05::part_2));
+    functions.insert((2022, 6, Part::One), boxed2(&y2022::d06::part_1));
+    functions.insert((2022, 6, Part::Two), boxed2(&y2022::d06::part_2));
     functions
 }
 
@@ -439,7 +441,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (136, 0, 110, 2, 0, 2, num_input * num_solver),
+            (140, 0, 126, 2, 0, 2, num_input * num_solver),
         );
         Ok(())
     }
