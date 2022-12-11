@@ -1,8 +1,8 @@
-use anyhow::bail;
-use hashbrown::HashMap;
+use anyhow::{anyhow, bail};
+
 use std::collections::VecDeque;
-use std::iter;
-use std::str::FromStr;
+
+use std::str::{FromStr, Lines};
 
 #[derive(Debug)]
 enum Operand {
@@ -10,10 +10,32 @@ enum Operand {
     Old,
 }
 
+impl FromStr for Operand {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "old" => Ok(Self::Old),
+            x => Ok(Self::Const(x.parse()?)),
+        }
+    }
+}
+
 #[derive(Debug)]
 enum Operation {
     Add,
     Mul,
+}
+impl FromStr for Operation {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "+" => Ok(Self::Add),
+            "*" => Ok(Self::Mul),
+            other => Err(anyhow!("Expected operator '+' or '*' but got {other}")),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -29,7 +51,7 @@ struct Monkey {
 }
 
 impl Monkey {
-    fn inspect_and_throw(&mut self) -> Option<(usize, i64)> {
+    fn inspect_and_throw(&mut self, denominator: i64, modulus: i64) -> Option<(usize, i64)> {
         let old = self.items.pop_front()?;
         let new = match (&self.op, &self.lhs, &self.rhs) {
             (Operation::Add, Operand::Const(lhs), Operand::Const(rhs)) => lhs + rhs,
@@ -40,25 +62,8 @@ impl Monkey {
             (Operation::Mul, Operand::Const(lhs), Operand::Old) => lhs * old,
             (Operation::Mul, Operand::Old, Operand::Const(rhs)) => old * rhs,
             (Operation::Mul, Operand::Old, Operand::Old) => old * old,
-        } / 3;
-        if new % self.test == 0 {
-            Some((self.destination_true, new))
-        } else {
-            Some((self.destination_false, new))
-        }
-    }
-    fn inspect_and_throw2(&mut self, modulo: i64) -> Option<(usize, i64)> {
-        let old = self.items.pop_front()?;
-        let new = match (&self.op, &self.lhs, &self.rhs) {
-            (Operation::Add, Operand::Const(lhs), Operand::Const(rhs)) => lhs + rhs,
-            (Operation::Add, Operand::Const(lhs), Operand::Old) => lhs + old,
-            (Operation::Add, Operand::Old, Operand::Const(rhs)) => old + rhs,
-            (Operation::Add, Operand::Old, Operand::Old) => old + old,
-            (Operation::Mul, Operand::Const(lhs), Operand::Const(rhs)) => lhs * rhs,
-            (Operation::Mul, Operand::Const(lhs), Operand::Old) => lhs * old,
-            (Operation::Mul, Operand::Old, Operand::Const(rhs)) => old * rhs,
-            (Operation::Mul, Operand::Old, Operand::Old) => old * old,
-        } % modulo;
+        } / denominator
+            % modulus;
         if new % self.test == 0 {
             Some((self.destination_true, new))
         } else {
@@ -67,83 +72,47 @@ impl Monkey {
     }
 }
 
+fn take_line<'a>(lines: &'a mut Lines, prefix: &str) -> anyhow::Result<&'a str> {
+    let line = lines
+        .next()
+        .ok_or_else(|| anyhow!("Expected line starting with '{prefix}' but got no line"))?;
+    line.strip_prefix(prefix)
+        .ok_or_else(|| anyhow!("Expected line starting with '{prefix}' but got '{line}'"))
+}
+
 impl FromStr for Monkey {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut lines = s.lines();
 
-        let id = lines
-            .next()
-            .unwrap()
-            .split_once(':')
-            .unwrap()
-            .0
-            .split_once(' ')
-            .unwrap()
-            .1
+        let id = take_line(&mut lines, "Monkey ")?
+            .strip_suffix(':')
+            .ok_or_else(|| anyhow!("Expected line ending with ':'"))?
             .parse()?;
-        // let re_id = regex::Regex::new(r"^Monkey (\d+):$").expect("Hard coded regex is valid");
-        // let cap_id = re_id.captures(lines.next().unwrap()).unwrap();
-        // let id = cap_id[1].parse()?;
 
         let mut items = VecDeque::new();
-        for item in lines.next().unwrap().split_once(':').unwrap().1.split(", ") {
+        for item in take_line(&mut lines, "  Starting items: ")?.split(',') {
             items.push_back(item.trim().parse()?);
         }
 
-        let operation_parts: Vec<_> = lines
-            .next()
-            .unwrap()
-            .split_once(':')
-            .unwrap()
-            .1
+        let expression: Vec<_> = take_line(&mut lines, "  Operation: new = ")?
             .split_whitespace()
             .collect();
-        let op = match operation_parts[3] {
-            "+" => Operation::Add,
-            "*" => Operation::Mul,
-            operation => {
-                bail!("but got {operation}")
-            }
-        };
-        let lhs = match operation_parts[2] {
-            "old" => Operand::Old,
-            x => Operand::Const(x.parse()?),
-        };
-        let rhs = match operation_parts[4] {
-            "old" => Operand::Old,
-            x => Operand::Const(x.parse()?),
-        };
+        if expression.len() != 3 {
+            bail!(
+                "Expected expression with 3 token but got {}",
+                expression.len()
+            );
+        }
+        let op = Operation::from_str(expression[1])?;
+        let lhs = Operand::from_str(expression[0])?;
+        let rhs = Operand::from_str(expression[2])?;
 
-        let test_parts: Vec<_> = lines
-            .next()
-            .unwrap()
-            .split_once(':')
-            .unwrap()
-            .1
-            .split_whitespace()
-            .collect();
-        let test = test_parts[2].parse()?;
+        let test = take_line(&mut lines, "  Test: divisible by ")?.parse()?;
 
-        let destination_true_parts: Vec<_> = lines
-            .next()
-            .unwrap()
-            .split_once(':')
-            .unwrap()
-            .1
-            .split_whitespace()
-            .collect();
-        let destination_false_parts: Vec<_> = lines
-            .next()
-            .unwrap()
-            .split_once(':')
-            .unwrap()
-            .1
-            .split_whitespace()
-            .collect();
-        let destination_true = destination_true_parts[3].parse()?;
-        let destination_false = destination_false_parts[3].parse()?;
+        let destination_true = take_line(&mut lines, "    If true: throw to monkey ")?.parse()?;
+        let destination_false = take_line(&mut lines, "    If false: throw to monkey ")?.parse()?;
 
         Ok(Monkey {
             id,
@@ -160,51 +129,48 @@ impl FromStr for Monkey {
 
 fn monkeys(s: &str) -> anyhow::Result<Vec<Monkey>> {
     let mut result = Vec::new();
-    for monkey in s.split("\n\n") {
+    for (i, monkey) in s.split("\n\n").enumerate() {
         let monkey = Monkey::from_str(monkey)?;
+        if monkey.id != i {
+            bail!("Expected monkey id {i} but got {0}", monkey.id);
+        }
         result.push(monkey);
     }
     Ok(result)
 }
 
-pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let mut monkeys = monkeys(input)?;
-    let mut counts: Vec<usize> = iter::repeat(0).take(monkeys.len()).collect();
-    for _ in 0..20 {
+fn monkey_business(
+    mut monkeys: Vec<Monkey>,
+    denominator: i64,
+    num_round: usize,
+) -> anyhow::Result<usize> {
+    if monkeys.len() < 2 {
+        bail!("Expected at least 2 monkeys but got {}", monkeys.len());
+    }
+    let mut counts = vec![0; monkeys.len()];
+    let modulus = monkeys.iter().map(|m| m.test).product();
+    for _ in 0..num_round {
         for src in 0..monkeys.len() {
-            while let Some((dst, lvl)) = monkeys[src].inspect_and_throw() {
+            while let Some((dst, lvl)) = monkeys[src].inspect_and_throw(denominator, modulus) {
                 counts[src] += 1;
                 monkeys[dst].items.push_back(lvl);
             }
         }
     }
     counts.sort();
-    let first = counts.pop().unwrap();
-    let second = counts.pop().unwrap();
+    let first = counts.pop().expect("Length checked above");
+    let second = counts.pop().expect("Length checked above");
     Ok(first * second)
 }
 
+pub fn part_1(input: &str) -> anyhow::Result<usize> {
+    let monkeys = monkeys(input)?;
+    monkey_business(monkeys, 3, 20)
+}
+
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let mut monkeys = monkeys(input)?;
-    let mut counts: Vec<usize> = iter::repeat(0).take(monkeys.len()).collect();
-    let mut modulo = 1;
-    for monkey in monkeys.iter() {
-        modulo *= monkey.test;
-    }
-    dbg!(modulo);
-    for round in 0..10000 {
-        println!("{round}");
-        for src in 0..monkeys.len() {
-            while let Some((dst, lvl)) = monkeys[src].inspect_and_throw2(modulo) {
-                counts[src] += 1;
-                monkeys[dst].items.push_back(lvl);
-            }
-        }
-    }
-    counts.sort();
-    let first = counts.pop().unwrap();
-    let second = counts.pop().unwrap();
-    Ok(first * second)
+    let monkeys = monkeys(input)?;
+    monkey_business(monkeys, 1, 10000)
 }
 
 #[cfg(test)]
