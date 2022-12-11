@@ -22,11 +22,12 @@ impl FromStr for Operand {
 }
 
 #[derive(Debug)]
-enum Operation {
+enum Operator {
     Add,
     Mul,
 }
-impl FromStr for Operation {
+
+impl FromStr for Operator {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -39,31 +40,56 @@ impl FromStr for Operation {
 }
 
 #[derive(Debug)]
+struct Operation {
+    op: Operator,
+    lhs: Operand,
+    rhs: Operand,
+}
+
+impl Operation {
+    fn evaluate(&self, old: i64) -> i64 {
+        match (&self.op, &self.lhs, &self.rhs) {
+            (Operator::Add, Operand::Const(lhs), Operand::Const(rhs)) => lhs + rhs,
+            (Operator::Add, Operand::Const(lhs), Operand::Old) => lhs + old,
+            (Operator::Add, Operand::Old, Operand::Const(rhs)) => old + rhs,
+            (Operator::Add, Operand::Old, Operand::Old) => old + old,
+            (Operator::Mul, Operand::Const(lhs), Operand::Const(rhs)) => lhs * rhs,
+            (Operator::Mul, Operand::Const(lhs), Operand::Old) => lhs * old,
+            (Operator::Mul, Operand::Old, Operand::Const(rhs)) => old * rhs,
+            (Operator::Mul, Operand::Old, Operand::Old) => old * old,
+        }
+    }
+}
+
+impl FromStr for Operation {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tokens: Vec<_> = s.split_whitespace().collect();
+        if tokens.len() != 3 {
+            bail!("Expected expression with 3 token but got {}", tokens.len());
+        }
+        let op = tokens[1].parse()?;
+        let lhs = tokens[0].parse()?;
+        let rhs = tokens[2].parse()?;
+        Ok(Self { op, lhs, rhs })
+    }
+}
+
+#[derive(Debug)]
 struct Monkey {
     id: usize,
     items: VecDeque<i64>,
-    lhs: Operand,
-    op: Operation,
-    rhs: Operand,
+    operation: Operation,
     test: i64,
     destination_true: usize,
     destination_false: usize,
 }
 
 impl Monkey {
-    fn inspect_and_throw(&mut self, denominator: i64, modulus: i64) -> Option<(usize, i64)> {
+    fn inspect_and_throw(&mut self, denominator: i64) -> Option<(usize, i64)> {
         let old = self.items.pop_front()?;
-        let new = match (&self.op, &self.lhs, &self.rhs) {
-            (Operation::Add, Operand::Const(lhs), Operand::Const(rhs)) => lhs + rhs,
-            (Operation::Add, Operand::Const(lhs), Operand::Old) => lhs + old,
-            (Operation::Add, Operand::Old, Operand::Const(rhs)) => old + rhs,
-            (Operation::Add, Operand::Old, Operand::Old) => old + old,
-            (Operation::Mul, Operand::Const(lhs), Operand::Const(rhs)) => lhs * rhs,
-            (Operation::Mul, Operand::Const(lhs), Operand::Old) => lhs * old,
-            (Operation::Mul, Operand::Old, Operand::Const(rhs)) => old * rhs,
-            (Operation::Mul, Operand::Old, Operand::Old) => old * old,
-        } / denominator
-            % modulus;
+        let new = self.operation.evaluate(old) / denominator;
         if new % self.test == 0 {
             Some((self.destination_true, new))
         } else {
@@ -96,18 +122,7 @@ impl FromStr for Monkey {
             items.push_back(item.trim().parse()?);
         }
 
-        let expression: Vec<_> = take_line(&mut lines, "  Operation: new = ")?
-            .split_whitespace()
-            .collect();
-        if expression.len() != 3 {
-            bail!(
-                "Expected expression with 3 token but got {}",
-                expression.len()
-            );
-        }
-        let op = Operation::from_str(expression[1])?;
-        let lhs = Operand::from_str(expression[0])?;
-        let rhs = Operand::from_str(expression[2])?;
+        let operation = take_line(&mut lines, "  Operation: new = ")?.parse()?;
 
         let test = take_line(&mut lines, "  Test: divisible by ")?.parse()?;
 
@@ -117,9 +132,7 @@ impl FromStr for Monkey {
         Ok(Monkey {
             id,
             items,
-            lhs,
-            op,
-            rhs,
+            operation,
             test,
             destination_true,
             destination_false,
@@ -148,12 +161,12 @@ fn monkey_business(
         bail!("Expected at least 2 monkeys but got {}", monkeys.len());
     }
     let mut counts = vec![0; monkeys.len()];
-    let modulus = monkeys.iter().map(|m| m.test).product();
+    let modulus: i64 = monkeys.iter().map(|m| m.test).product();
     for _ in 0..num_round {
         for src in 0..monkeys.len() {
-            while let Some((dst, lvl)) = monkeys[src].inspect_and_throw(denominator, modulus) {
+            while let Some((dst, lvl)) = monkeys[src].inspect_and_throw(denominator) {
                 counts[src] += 1;
-                monkeys[dst].items.push_back(lvl);
+                monkeys[dst].items.push_back(lvl % modulus);
             }
         }
     }
