@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 #[derive(Debug)]
 enum Operand {
-    Const(i32),
+    Const(i64),
     Old,
 }
 
@@ -19,17 +19,17 @@ enum Operation {
 #[derive(Debug)]
 struct Monkey {
     id: usize,
-    items: VecDeque<i32>,
+    items: VecDeque<i64>,
     lhs: Operand,
     op: Operation,
     rhs: Operand,
-    test: i32,
+    test: i64,
     destination_true: usize,
     destination_false: usize,
 }
 
 impl Monkey {
-    fn inspect_and_throw(&mut self) -> Option<(usize, i32)> {
+    fn inspect_and_throw(&mut self) -> Option<(usize, i64)> {
         let old = self.items.pop_front()?;
         let new = match (&self.op, &self.lhs, &self.rhs) {
             (Operation::Add, Operand::Const(lhs), Operand::Const(rhs)) => lhs + rhs,
@@ -41,6 +41,24 @@ impl Monkey {
             (Operation::Mul, Operand::Old, Operand::Const(rhs)) => old * rhs,
             (Operation::Mul, Operand::Old, Operand::Old) => old * old,
         } / 3;
+        if new % self.test == 0 {
+            Some((self.destination_true, new))
+        } else {
+            Some((self.destination_false, new))
+        }
+    }
+    fn inspect_and_throw2(&mut self, modulo: i64) -> Option<(usize, i64)> {
+        let old = self.items.pop_front()?;
+        let new = match (&self.op, &self.lhs, &self.rhs) {
+            (Operation::Add, Operand::Const(lhs), Operand::Const(rhs)) => lhs + rhs,
+            (Operation::Add, Operand::Const(lhs), Operand::Old) => lhs + old,
+            (Operation::Add, Operand::Old, Operand::Const(rhs)) => old + rhs,
+            (Operation::Add, Operand::Old, Operand::Old) => old + old,
+            (Operation::Mul, Operand::Const(lhs), Operand::Const(rhs)) => lhs * rhs,
+            (Operation::Mul, Operand::Const(lhs), Operand::Old) => lhs * old,
+            (Operation::Mul, Operand::Old, Operand::Const(rhs)) => old * rhs,
+            (Operation::Mul, Operand::Old, Operand::Old) => old * old,
+        } % modulo;
         if new % self.test == 0 {
             Some((self.destination_true, new))
         } else {
@@ -150,7 +168,7 @@ fn monkeys(s: &str) -> anyhow::Result<Vec<Monkey>> {
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let mut monkeys = dbg!(monkeys(input)?);
+    let mut monkeys = monkeys(input)?;
     let mut counts: Vec<usize> = iter::repeat(0).take(monkeys.len()).collect();
     for _ in 0..20 {
         for src in 0..monkeys.len() {
@@ -160,15 +178,33 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
             }
         }
     }
-    dbg!(&counts);
     counts.sort();
     let first = counts.pop().unwrap();
     let second = counts.pop().unwrap();
     Ok(first * second)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<String> {
-    Ok("".to_string())
+pub fn part_2(input: &str) -> anyhow::Result<usize> {
+    let mut monkeys = monkeys(input)?;
+    let mut counts: Vec<usize> = iter::repeat(0).take(monkeys.len()).collect();
+    let mut modulo = 1;
+    for monkey in monkeys.iter() {
+        modulo *= monkey.test;
+    }
+    dbg!(modulo);
+    for round in 0..10000 {
+        println!("{round}");
+        for src in 0..monkeys.len() {
+            while let Some((dst, lvl)) = monkeys[src].inspect_and_throw2(modulo) {
+                counts[src] += 1;
+                monkeys[dst].items.push_back(lvl);
+            }
+        }
+    }
+    counts.sort();
+    let first = counts.pop().unwrap();
+    let second = counts.pop().unwrap();
+    Ok(first * second)
 }
 
 #[cfg(test)]
