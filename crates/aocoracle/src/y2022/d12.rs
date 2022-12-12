@@ -1,6 +1,7 @@
+use anyhow::{anyhow, bail};
 use hashbrown::HashMap;
 use pathfinding::prelude::bfs;
-use std::ops::{Add, AddAssign, Sub};
+use std::ops::Add;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 struct Point {
@@ -11,12 +12,12 @@ struct Point {
 impl Point {
     fn successors(&self, heights: &HashMap<Point, u8>) -> Vec<Point> {
         let &Point { x, y } = self;
-        let height = heights[&self];
+        let height = heights[self];
         let mut result = vec![
-            Point { x: x, y: y - 1 },
-            Point { x: x, y: y + 1 },
-            Point { x: x - 1, y: y },
-            Point { x: x + 1, y: y },
+            Point { x, y: y - 1 },
+            Point { x, y: y + 1 },
+            Point { x: x - 1, y },
+            Point { x: x + 1, y },
         ];
         result.retain(|p| {
             if let Some(h) = heights.get(p) {
@@ -40,72 +41,55 @@ impl Add for Point {
     }
 }
 
-fn height_map(s: &str) -> (HashMap<(Point), u8>, Point, Point) {
-    let mut result = HashMap::new();
-    let mut start = Point::default();
-    let mut end = Point::default();
+fn heightmap(s: &str) -> anyhow::Result<(HashMap<Point, u8>, Point, Point)> {
+    let mut heights = HashMap::new();
+    let mut start = None;
+    let mut end = None;
     for (y, line) in s.lines().enumerate() {
-        for (x, height) in line.bytes().enumerate() {
-            match height {
+        let y = y as i32;
+        for (x, b) in line.bytes().enumerate() {
+            let x = x as i32;
+            let h = match b {
                 b'S' => {
-                    let x = x as i32;
-                    let y = y as i32;
-                    let height = 0;
-                    start = Point { x, y };
-                    result.insert(Point { x, y }, height);
+                    start = Some(Point { x, y });
+                    0
                 }
                 b'E' => {
-                    let x = x as i32;
-                    let y = y as i32;
-                    let height = b'z' - b'a';
-                    end = Point { x, y };
-                    result.insert(Point { x, y }, height);
+                    end = Some(Point { x, y });
+                    b'z' - b'a'
                 }
+                b if b >= b'a' => b - b'a',
                 _ => {
-                    let x = x as i32;
-                    let y = y as i32;
-                    let height = height - b'a';
-                    result.insert(Point { x, y }, height);
+                    bail!("Expected height to be in [SEa-z] but got {}", b as char);
                 }
-            }
+            };
+            heights.insert(Point { x, y }, h);
         }
     }
-    (result, start, end)
+    Ok((
+        heights,
+        start.ok_or_else(|| anyhow!("Expected input to contain starting point"))?,
+        end.ok_or_else(|| anyhow!("Expected input to contain starting point"))?,
+    ))
+}
+
+fn min_num_step(heights: &HashMap<Point, u8>, start: Point, end: Point) -> Option<usize> {
+    bfs(&start, |p| p.successors(heights), |p| *p == end).map(|path| path.len() - 1)
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let (heights, start, end) = height_map(input);
-    let result = bfs(&start, |p| p.successors(&heights), |p| *p == end).unwrap();
-    // let mut distances = HashMap::with_capacity(heights.len());
-    // let mut curr_h = heights[&start];
-    // let mut curr_d = 0;
-    // distances.insert(curr_p, curr_d);
-
-    // while start != end {
-    //     for delta in deltas {
-    //         let next_p = curr_p + delta;
-    //         if let Some(next_h) = heights.get(&next_p){
-    //             if next_h == curr_h+1{
-    //                 di
-    //             }
-    //         }
-    //     }
-    // }
-    Ok(result.len() - 1)
+    let (heights, start, end) = heightmap(input)?;
+    min_num_step(&heights, start, end).ok_or_else(|| anyhow!("Could not find any path)"))
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let (heights, _, end) = height_map(input);
-    let result = heights
+    let (heights, _, end) = heightmap(input)?;
+    heights
         .iter()
-        .filter(|(p, h)| **h == 0)
-        .filter_map(|(p, _)| {
-            bfs(p, |p| p.successors(&heights), |p| *p == end).and_then(|r| Some(r.len()))
-        })
+        .filter(|(_, h)| **h == 0)
+        .filter_map(|(start, _)| min_num_step(&heights, *start, end))
         .min()
-        .unwrap();
-
-    Ok(result - 1)
+        .ok_or_else(|| anyhow!("Could not find any path"))
 }
 
 #[cfg(test)]
