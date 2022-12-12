@@ -10,9 +10,9 @@ struct Point {
 }
 
 impl Point {
-    fn successors(&self, heights: &HashMap<Point, u8>) -> Vec<Point> {
+    fn successors(&self, heights: &HashMap<Point, u8>, reverse: bool) -> Vec<Point> {
         let &Point { x, y } = self;
-        let height = heights[self];
+        let prev = heights[self];
         let mut result = vec![
             Point { x, y: y - 1 },
             Point { x, y: y + 1 },
@@ -20,8 +20,11 @@ impl Point {
             Point { x: x + 1, y },
         ];
         result.retain(|p| {
-            if let Some(h) = heights.get(p) {
-                *h < height + 2
+            if let Some(next) = heights.get(p) {
+                match reverse {
+                    false => *next <= prev + 1,
+                    true => *next + 1 >= prev,
+                }
             } else {
                 false
             }
@@ -73,23 +76,18 @@ fn heightmap(s: &str) -> anyhow::Result<(HashMap<Point, u8>, Point, Point)> {
     ))
 }
 
-fn min_num_step(heights: &HashMap<Point, u8>, start: Point, end: Point) -> Option<usize> {
-    bfs(&start, |p| p.successors(heights), |p| *p == end).map(|path| path.len() - 1)
-}
-
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let (heights, start, end) = heightmap(input)?;
-    min_num_step(&heights, start, end).ok_or_else(|| anyhow!("Could not find any path)"))
+    let (heights, end, start) = heightmap(input)?;
+    bfs(&start, |p| p.successors(&heights, true), |p| *p == end)
+        .map(|path| path.len() - 1)
+        .ok_or_else(|| anyhow!("Could not find any path)"))
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let (heights, _, end) = heightmap(input)?;
-    heights
-        .iter()
-        .filter(|(_, h)| **h == 0)
-        .filter_map(|(start, _)| min_num_step(&heights, *start, end))
-        .min()
-        .ok_or_else(|| anyhow!("Could not find any path"))
+    bfs(&end, |p| p.successors(&heights, true), |p| heights[p] == 0)
+        .map(|path| path.len() - 1)
+        .ok_or_else(|| anyhow!("Could not find any path)"))
 }
 
 #[cfg(test)]
