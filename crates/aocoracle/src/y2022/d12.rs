@@ -95,7 +95,17 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+    let (heights, _, end) = height_map(input);
+    let result = heights
+        .iter()
+        .filter(|(p, h)| **h == 0)
+        .filter_map(|(p, _)| {
+            bfs(p, |p| p.successors(&heights), |p| *p == end).and_then(|r| Some(r.len()))
+        })
+        .min()
+        .unwrap();
+
+    Ok(result - 1)
 }
 
 #[cfg(test)]
