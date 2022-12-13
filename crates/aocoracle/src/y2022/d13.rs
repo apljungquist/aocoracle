@@ -1,6 +1,9 @@
+use itertools::Itertools;
+use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter, Pointer};
 use std::str::FromStr;
 
+#[derive(PartialEq)]
 enum Signal {
     Integer(i32),
     List(Vec<Signal>),
@@ -64,16 +67,16 @@ fn pairs(s: &str) -> anyhow::Result<Vec<(Signal, Signal)>> {
 fn in_order(left: &Signal, right: &Signal, indent: &String) -> Option<bool> {
     let mut new_indent = indent.clone();
     new_indent.extend("  ".chars());
-    println!("{indent}- Compare {left:?} vs {right:?}");
+    // println!("{indent}- Compare {left:?} vs {right:?}");
     match (left, right) {
         (Signal::Integer(l), Signal::Integer(r)) => {
             if l < r {
-                println!("{indent} - Left side is smaller, so the inputs are in the right order");
+                // println!("{indent} - Left side is smaller, so the inputs are in the right order");
                 Some(true)
             } else if r < l {
-                println!(
-                    "{indent} - Right side is smaller, so the inputs are not in the right order"
-                );
+                // println!(
+                //     "{indent} - Right side is smaller, so the inputs are not in the right order"
+                // );
                 Some(false)
             } else {
                 None
@@ -92,12 +95,12 @@ fn in_order(left: &Signal, right: &Signal, indent: &String) -> Option<bool> {
                 }
             }
             if ls.len() < rs.len() {
-                println!("{indent} - Left side ran out of items, so inputs are in the right order");
+                // println!("{indent} - Left side ran out of items, so inputs are in the right order");
                 Some(true)
             } else if rs.len() < ls.len() {
-                println!(
-                    "{indent} - Right side ran out of items, so inputs are not in the right order"
-                );
+                // println!(
+                //     "{indent} - Right side ran out of items, so inputs are not in the right order"
+                // );
                 Some(false)
             } else {
                 None
@@ -110,7 +113,7 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let pairs = pairs(input)?;
     let mut result = 0;
     for (i, (left, right)) in pairs.into_iter().enumerate() {
-        println!("\n== Pair {} ==", i + 1);
+        // println!("\n== Pair {} ==", i + 1);
         if in_order(&left, &right, &String::new()).unwrap() {
             result += i + 1
         }
@@ -119,7 +122,31 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+    let mut packets = Vec::new();
+    for line in input.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        packets.push(line.parse()?);
+    }
+    packets.push("[[2]]".parse()?);
+    packets.push("[[6]]".parse()?);
+
+    packets.sort_by(|left, right| {
+        if in_order(left, right, &String::new()).unwrap() {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
+    });
+
+    let div1 = "[[2]]".parse()?;
+    let div2 = "[[6]]".parse()?;
+    let pos1 = packets.iter().find_position(|s| **s == div1).unwrap().0 + 1;
+    let pos2 = packets.iter().find_position(|s| **s == div2).unwrap().0 + 1;
+    dbg!(pos1);
+    dbg!(pos2);
+    Ok(pos1 * pos2)
 }
 
 #[cfg(test)]
