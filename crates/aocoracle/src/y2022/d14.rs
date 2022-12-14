@@ -111,7 +111,27 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+    let paths = rock_paths(input);
+    let mut coordinates = rock_coordinates(&paths);
+    let y_max = coordinates.iter().map(|p| p.y).max().unwrap() + 2;
+    for x in 0..=1000 {
+        coordinates.insert(Point { x, y: y_max });
+    }
+    debug_print_coordinates(&coordinates);
+    for i in 1.. {
+        let mut curr = Point { x: 500, y: 0 };
+        while let Some(next) = moved_sand(&coordinates, &curr) {
+            if next.y == y_max {
+                panic!("Oops")
+            }
+            curr = next;
+        }
+        if curr.y == 0 {
+            return Ok(i);
+        }
+        coordinates.insert(curr);
+    }
+    unreachable!()
 }
 
 #[cfg(test)]
