@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail};
 use hashbrown::HashSet;
+
 use itertools::Itertools;
-use std::ops::{Add, Sub};
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 struct Point {
@@ -15,28 +15,6 @@ impl Point {
     }
 }
 
-impl Add for Point {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-        }
-    }
-}
-
-impl Sub for Point {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Point {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-        }
-    }
-}
-
 fn parsed(text: &str) -> anyhow::Result<Vec<(Point, Point)>> {
     let re = regex::Regex::new(
         r"^Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)$",
@@ -46,7 +24,7 @@ fn parsed(text: &str) -> anyhow::Result<Vec<(Point, Point)>> {
     for line in text.lines() {
         let cap = re
             .captures(line)
-            .ok_or(anyhow!("Could not capture line {}", line))?;
+            .ok_or_else(|| anyhow!("Could not capture line {}", line))?;
         result.push((
             Point {
                 x: cap[1].parse()?,
@@ -76,16 +54,15 @@ pub fn part_1x(input: &str, tgt: i64) -> anyhow::Result<usize> {
         }
         let x_first = s.x - rx;
         let x_last = s.x + rx;
-        dbg!((s, b, r, rx, x_first, x_last));
         for x in x_first..=x_last {
             coverage.insert(x);
         }
     }
-    let coverage: Vec<_> = coverage.difference(&beacons).collect();
+    let coverage = coverage.difference(&beacons).collect_vec();
     Ok(coverage.len())
 }
 
-pub fn part_1a(input: &str) -> anyhow::Result<usize> {
+pub fn _part_1a(input: &str) -> anyhow::Result<usize> {
     part_1x(input, 10)
 }
 
@@ -103,7 +80,7 @@ pub fn part_2x(input: &str, lo: i64, hi: i64) -> anyhow::Result<i64> {
             y += 1;
         }
         for (s, b) in input.iter() {
-            let r = s.manhattan(&b) as i64;
+            let r = s.manhattan(b) as i64;
             let rx = r - s.y.abs_diff(y) as i64;
             if rx < 0 {
                 continue;
@@ -115,12 +92,12 @@ pub fn part_2x(input: &str, lo: i64, hi: i64) -> anyhow::Result<i64> {
                 continue 'outer;
             }
         }
-        return Ok(dbg!(x) * 4000000 + dbg!(y));
+        return Ok(x * 4000000 + y);
     }
-    bail!("Oops");
+    bail!("Found no possible beacon locations");
 }
 
-pub fn part_2a(input: &str) -> anyhow::Result<i64> {
+pub fn _part_2a(input: &str) -> anyhow::Result<i64> {
     part_2x(input, 0, 20)
 }
 
@@ -137,7 +114,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1a, "example", Part::One);
+        assert_correct_answer_on_correct_input!(_part_1a, "example", Part::One);
     }
 
     #[test]
@@ -147,7 +124,7 @@ mod tests {
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2a, "example", Part::Two);
+        assert_correct_answer_on_correct_input!(_part_2a, "example", Part::Two);
     }
 
     #[test]
@@ -157,6 +134,6 @@ mod tests {
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_error_on_wrong_input!(part_1a, part_2a);
+        assert_error_on_wrong_input!(_part_1a, _part_2a);
     }
 }
