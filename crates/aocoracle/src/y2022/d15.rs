@@ -1,16 +1,16 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use hashbrown::HashSet;
 use itertools::Itertools;
 use std::ops::{Add, Sub};
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 struct Point {
-    x: i32,
-    y: i32,
+    x: i64,
+    y: i64,
 }
 
 impl Point {
-    fn manhattan(&self, other: &Self) -> u32 {
+    fn manhattan(&self, other: &Self) -> u64 {
         self.x.abs_diff(other.x) + self.y.abs_diff(other.y)
     }
 }
@@ -61,7 +61,7 @@ fn parsed(text: &str) -> anyhow::Result<Vec<(Point, Point)>> {
     Ok(result)
 }
 
-pub fn part_1x(input: &str, tgt: i32) -> anyhow::Result<usize> {
+pub fn part_1x(input: &str, tgt: i64) -> anyhow::Result<usize> {
     let input = parsed(input)?;
     let mut coverage = HashSet::new();
     let mut beacons = HashSet::new();
@@ -69,8 +69,8 @@ pub fn part_1x(input: &str, tgt: i32) -> anyhow::Result<usize> {
         if b.y == tgt {
             beacons.insert(b.x);
         }
-        let r = s.manhattan(&b) as i32;
-        let rx = r - s.y.abs_diff(tgt) as i32;
+        let r = s.manhattan(&b) as i64;
+        let rx = r - s.y.abs_diff(tgt) as i64;
         if rx < 0 {
             continue;
         }
@@ -93,8 +93,39 @@ pub fn part_1b(input: &str) -> anyhow::Result<usize> {
     part_1x(input, 2000000)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+pub fn part_2x(input: &str, lo: i64, hi: i64) -> anyhow::Result<i64> {
+    let input = parsed(input)?;
+    let mut x = lo;
+    let mut y = lo;
+    'outer: while y <= hi {
+        if hi < x {
+            x = lo;
+            y += 1;
+        }
+        for (s, b) in input.iter() {
+            let r = s.manhattan(&b) as i64;
+            let rx = r - s.y.abs_diff(y) as i64;
+            if rx < 0 {
+                continue;
+            }
+            let x_first = s.x - rx;
+            let x_last = s.x + rx;
+            if x_first <= x && x <= x_last {
+                x = x_last + 1;
+                continue 'outer;
+            }
+        }
+        return Ok(dbg!(x) * 4000000 + dbg!(y));
+    }
+    bail!("Oops");
+}
+
+pub fn part_2a(input: &str) -> anyhow::Result<i64> {
+    part_2x(input, 0, 20)
+}
+
+pub fn part_2b(input: &str) -> anyhow::Result<i64> {
+    part_2x(input, 0, 4000000)
 }
 
 #[cfg(test)]
@@ -116,16 +147,16 @@ mod tests {
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2, "example", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2a, "example", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2b, "6bb0c0bd67", Part::Two);
     }
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_error_on_wrong_input!(part_1a, part_2);
+        assert_error_on_wrong_input!(part_1a, part_2a);
     }
 }
