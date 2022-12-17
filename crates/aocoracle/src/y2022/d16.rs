@@ -1,24 +1,26 @@
-use anyhow::anyhow;
+use std::fmt::{Display, Formatter};
+use anyhow::{anyhow, bail};
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 use pathfinding::prelude::{bfs, dijkstra};
 use std::hash::Hash;
+use std::str::FromStr;
 
-fn parsed(s: &str) -> anyhow::Result<(HashMap<String, usize>, HashMap<String, HashSet<String>>)> {
+fn parsed(s: &str) -> anyhow::Result<(HashMap<Valve, usize>, HashMap<Valve, HashSet<Valve>>)> {
     let re = regex::Regex::new(
         r"^Valve ([A-Z]{2}) has flow rate=(\d+); tunnels? leads? to valves? ([A-Z, ]+)$",
     )
     .expect("Hard coded regex is valid");
     let mut pressures = HashMap::new();
-    let mut tunnels: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut tunnels: HashMap<Valve, HashSet<Valve>> = HashMap::new();
     for line in s.lines() {
         let cap = re
             .captures(line)
             .ok_or_else(|| anyhow!("Could not capture line {}", line))?;
-        let src = cap[1].to_string();
+        let src:Valve = cap[1].parse()?;
         pressures.insert(src.clone(), cap[2].parse()?);
         for dst in cap[3].split(',') {
-            let dst = dst.trim().to_string();
+            let dst = dst.trim().parse()?;
             tunnels.entry(src.clone()).or_default().insert(dst);
         }
     }
@@ -26,29 +28,47 @@ fn parsed(s: &str) -> anyhow::Result<(HashMap<String, usize>, HashMap<String, Ha
 }
 
 enum Action {
-    Move(String),
+    Move(Valve),
     Open,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct Valve(u16);
+
+impl Display for Valve {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}",self.0 as u8 as char);
+        write!(f, "{}",(self.0>>8) as u8 as char);
+        Ok(())
+    }
+}
+
+impl FromStr for Valve{
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len()!= 2{
+            bail!("Expected exactly 2 bytes but got {}", s.len());
+        }
+        let s = s.as_bytes();
+        Ok(Self((s[0] as u16) + ((s[1] as u16)<<8)))
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct State {
-    elf: String,
-    elephant: String,
-    valves_remaining: Vec<String>,
+    elf: Valve,
+    elephant: Valve,
+    valves_remaining: Vec<Valve>,
     duration_remaining: usize,
 }
 
 impl State {
     fn neighbors(
         &self,
-        valves: &HashMap<String, usize>,
-        distances: &HashMap<String, HashMap<String, usize>>,
+        valves: &HashMap<Valve, usize>,
+        distances: &HashMap<Valve, HashMap<Valve, usize>>,
     ) -> Vec<(State, i64)> {
-        // let distances: HashMap<String, usize> = self
-        //     .valves_remaining
-        //     .iter()
-        //     .map(|valve| (valve.clone(), distance(tunnels, &self.valve, valve)))
-        //     .collect();
         let rate_remaining: usize = self.valves_remaining.iter().map(|v| valves[v]).sum();
         let mut result: Vec<(State, i64)> = self
             .valves_remaining
@@ -86,8 +106,8 @@ impl State {
     }
     fn neighbors2(
         &self,
-        valves: &HashMap<String, usize>,
-        tunnels: &HashMap<String, HashSet<String>>,
+        valves: &HashMap<Valve, usize>,
+        tunnels: &HashMap<Valve, HashSet<Valve>>,
     ) -> Vec<(State, i64)> {
         let rate_remaining = self
             .valves_remaining
@@ -157,11 +177,11 @@ impl State {
     }
 }
 
-fn distance(edges: &HashMap<String, HashSet<String>>, src: &String, dst: &String) -> usize {
+fn distance(edges: &HashMap<Valve, HashSet<Valve>>, src: &Valve, dst: &Valve) -> usize {
     bfs(src, |t| edges[t].clone(), |t| t == dst).unwrap().len()
 }
 
-fn pressure_released(pressures: &HashMap<String, usize>, states: &[State]) -> usize {
+fn pressure_released(pressures: &HashMap<Valve, usize>, states: &[State]) -> usize {
     states
         .iter()
         .unique_by(|s| s.elf.clone())
@@ -171,13 +191,13 @@ fn pressure_released(pressures: &HashMap<String, usize>, states: &[State]) -> us
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let (pressures, tunnels) = parsed(input)?;
-    let valve = "AA".to_string();
+    let valve:Valve = "AA".parse().unwrap();
     let mut nodes = HashSet::new();
     for (src, dsts) in tunnels.iter() {
         nodes.insert(src.clone());
         nodes.extend(dsts.iter().cloned());
     }
-    let mut distances: HashMap<String, HashMap<String, usize>> = HashMap::new();
+    let mut distances: HashMap<Valve, HashMap<Valve, usize>> = HashMap::new();
     for src in nodes.iter() {
         for dst in nodes.iter() {
             distances
@@ -208,13 +228,13 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let (pressures, tunnels) = parsed(input)?;
-    let valve = "AA".to_string();
+    let valve:Valve = "AA".parse().unwrap();
     let mut nodes = HashSet::new();
     for (src, dsts) in tunnels.iter() {
         nodes.insert(src.clone());
         nodes.extend(dsts.iter().cloned());
     }
-    let mut distances: HashMap<String, HashMap<String, usize>> = HashMap::new();
+    let mut distances: HashMap<Valve, HashMap<Valve, usize>> = HashMap::new();
     for src in nodes.iter() {
         for dst in nodes.iter() {
             distances
@@ -273,5 +293,12 @@ mod tests {
     #[test]
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
+    }
+
+    #[test]
+    fn valve_from_string_to_string(){
+        for expected in ["AA", "AZ", "ZA", "ZZ"] {
+            assert_eq!(Valve::from_str(expected).unwrap().to_string(), expected)
+        }
     }
 }
