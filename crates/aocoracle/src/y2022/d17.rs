@@ -1,6 +1,6 @@
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
-use std::ops::Add;
+use std::ops::{Add, Index};
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 struct Point {
@@ -100,15 +100,21 @@ fn move_v(state: &HashSet<Point>, prev: &Vec<Point>) -> Option<Vec<Point>> {
     }
 }
 
-fn print_state(state: &HashSet<Point>, rock: &Vec<Point>, label: &str, default: char) {
+fn print_state(
+    state: &HashSet<Point>,
+    rock: &Vec<Point>,
+    label: &str,
+    default: char,
+    limit: Option<i32>,
+) {
     let mut state: HashMap<Point, char> = state.iter().cloned().map(|p| (p, '#')).collect();
     for p in rock {
         state.insert(p.clone(), '@');
     }
     let x_min = state.keys().map(|p| p.x).min().unwrap_or(0).min(-1);
     let x_max = state.keys().map(|p| p.x).max().unwrap_or(0).max(7);
-    let y_min = state.keys().map(|p| p.y).min().unwrap_or(0).min(-1);
     let y_max = state.keys().map(|p| p.y).max().unwrap_or(0);
+    let y_min = state.keys().map(|p| p.y).min().unwrap_or(0).min(-1);
 
     for x in x_min..=x_max {
         state.insert(Point::new(x, y_min), '-');
@@ -120,8 +126,12 @@ fn print_state(state: &HashSet<Point>, rock: &Vec<Point>, label: &str, default: 
     state.insert(Point::new(x_min, y_min), '+');
     state.insert(Point::new(x_max, y_min), '+');
 
+    let y_min_effective = match limit {
+        Some(limit) => y_min.max(y_max - limit),
+        None => y_min,
+    };
     println!("{}", label);
-    for y in (y_min..=y_max).rev() {
+    for y in (y_min_effective..=y_max).rev() {
         for x in x_min..=x_max {
             print!(
                 "{}",
@@ -187,16 +197,16 @@ pub fn part_1(input: &str) -> anyhow::Result<i32> {
                 // print_state(&state, &h,"Pushed horizontally", '.');
                 if let Some(v) = move_v(&state, &h) {
                     // println!("hv");
-                    std::mem::replace(&mut prev, v);
+                    prev = v;
                 } else {
                     // println!("h.");
-                    std::mem::replace(&mut prev, h);
+                    prev = h;
                     break;
                 }
             } else {
                 if let Some(v) = move_v(&state, &prev) {
                     // println!(".v");
-                    std::mem::replace(&mut prev, v);
+                    prev = v;
                 } else {
                     // println!("..");
                     break;
@@ -208,13 +218,170 @@ pub fn part_1(input: &str) -> anyhow::Result<i32> {
             state.insert(p);
         }
     }
-
+    print_state(&state, &vec![], "Done", '.', None);
     Ok(state.iter().map(|p| p.y).max().unwrap() + 1)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+fn fingerprint(state: &HashSet<Point>) -> Option<Vec<u8>> {
+    let y_max = state.iter().map(|p| p.y).max().unwrap_or(0);
+    let mut result = Vec::new();
+    for y in (0..=y_max).rev() {
+        let mut row = 0;
+        for x in 0..=6 {
+            if state.contains(&Point::new(x, y)) {
+                row += 2 << x;
+            }
+        }
+        if row == 0b1111111 {
+            // for y2 in 0..y{
+            //     for x in 0..=6{
+            //         state.remove(&Point::new(x,y2));
+            //     }
+            // }
+            return Some(result);
+        }
+        result.push(row);
+    }
+    None
 }
+
+struct CyclesDetector {
+    fingerprints: Vec<Option<Vec<u8>>>,
+}
+
+impl CyclesDetector {
+    fn update(&mut self, state: &HashSet<Point>) -> bool {
+        let f_new = fingerprint(state);
+        match f_new.as_ref().and_then(|f| Some(f.len())) {
+            Some(h) => {
+                println!("New fingerprint has height {h}");
+            }
+            None => {
+                println!("New fingerprint has not height");
+            }
+        }
+        let epoch_num = self.fingerprints.len() + 1;
+        let result = if let Some(i) = self.fingerprints.iter().position(|f_old| *f_old == f_new) {
+            println!("Cycle detected after {epoch_num} epochs matching epoch {i}");
+            for (j, f_old) in self.fingerprints.iter().enumerate() {
+                if let Some(f_old) = f_old {
+                    println!("Epoch {j:>3} has height {0:>6}", f_old.len())
+                } else {
+                    println!("Epoch {j:>3} has no fingerprint")
+                }
+            }
+            true
+        } else {
+            println!("No cycles detected after {epoch_num} epochs");
+            false
+        };
+        self.fingerprints.push(f_new);
+        result
+    }
+}
+
+pub fn part_2(input: &str) -> anyhow::Result<i32> {
+    let rock1 = vec![
+        Point::new(0, 0),
+        Point::new(1, 0),
+        Point::new(2, 0),
+        Point::new(3, 0),
+    ];
+    let rock2 = vec![
+        Point::new(1, 0),
+        Point::new(0, 1),
+        Point::new(1, 1),
+        Point::new(2, 1),
+        Point::new(1, 2),
+    ];
+    let rock3 = vec![
+        Point::new(0, 0),
+        Point::new(1, 0),
+        Point::new(2, 0),
+        Point::new(2, 1),
+        Point::new(2, 2),
+    ];
+    let rock4 = vec![
+        Point::new(0, 0),
+        Point::new(0, 1),
+        Point::new(0, 2),
+        Point::new(0, 3),
+    ];
+    let rock5 = vec![
+        Point::new(0, 0),
+        Point::new(1, 0),
+        Point::new(0, 1),
+        Point::new(1, 1),
+    ];
+
+    let mut epoch_num = 0;
+    let mut cycles_detector = CyclesDetector {
+        fingerprints: vec![Some(vec![127])],
+    };
+    let finite_jets = parsed(input);
+    let mut jets = finite_jets.iter().enumerate().cycle().peekable();
+    let mut state: HashSet<Point> = HashSet::new();
+    for (i, rock) in [rock1, rock2, rock3, rock4, rock5]
+        .iter()
+        .enumerate()
+        .cycle()
+        .take(1300 + 1620)
+    {
+        let j = jets.peek().unwrap().0;
+        // println!("{i:>4}, {j:>4}");
+        if i == 0 && j == 0 {
+            println!("Epoch {epoch_num}");
+            if cycles_detector.update(&state) {
+                return Ok(0);
+            }
+            print_state(&state, &vec![], "Epoch end", '.', Some(100));
+            if epoch_num > 1 {
+                break;
+            }
+            epoch_num += 1;
+        }
+        let max_y = state.iter().map(|p| p.y).max().unwrap_or(-1);
+        let mut prev = rock
+            .iter()
+            .map(|p| Point::new(p.x + 2, p.y + 4 + max_y))
+            .collect();
+        // print_state(&state, &prev, "Begins falling", '.');
+        loop {
+            let (_, jet) = jets.next().unwrap();
+            if let Some(h) = move_h(&state, jet, &prev) {
+                // println!("{jet}");
+                // print_state(&state, &h,"Pushed horizontally", '.');
+                if let Some(v) = move_v(&state, &h) {
+                    // println!("hv");
+                    prev = v;
+                    // std::mem::replace(&mut prev, v);
+                } else {
+                    // println!("h.");
+                    prev = h;
+                    break;
+                }
+            } else {
+                if let Some(v) = move_v(&state, &prev) {
+                    // println!(".v");
+                    prev = v;
+                } else {
+                    // println!("..");
+                    break;
+                }
+            }
+            // print_state(&state, &prev, jet.name(), '.');
+        }
+        for p in prev {
+            state.insert(p);
+        }
+    }
+    // print_state(&state, &vec![], "Done", '.', None);
+    Ok(state.iter().map(|p| p.y).max().unwrap() + 1)
+}
+
+// 10091
+// 5
+// 50455
 
 #[cfg(test)]
 mod tests {
@@ -248,3 +415,41 @@ mod tests {
         assert_error_on_wrong_input!(part_1, part_2);
     }
 }
+
+// tiles in rock cycle: 4+5+5+4+4=22
+
+// example
+//  offset
+//   height 43
+//   tiles 110
+//   rocks 110/22*5 = 25
+//  cycle
+//   height 53
+//   tiles 154
+//   rocks 154/22*5 = 35
+//
+// (1000000000000-25)//35 = 28571428570
+// (1000000000000-25)%35 = 25
+// => > 28571428570*53+43
+// => > 1514285714253
+// tgt  1514285714288
+// ok
+// simulate 25+25 => height 78
+// 28571428570*53+78 = 1514285714288
+//                tgt  1514285714288
+// ok
+
+// input
+//  offset
+//   height 1998
+//   tiles 5720
+//   rocks 5720/22*5 = 1300
+//  cycle
+//   height 2681
+//   tiles 7656
+//   rocks 7656/22*5 = 1740
+//
+// (1000000000000-1300)//1740 = 574712642
+// (1000000000000-1300)%1740 = 1620
+// simulate 1300+1620 => height 4480
+// 574712642*2681+4480 = 1540804597682
