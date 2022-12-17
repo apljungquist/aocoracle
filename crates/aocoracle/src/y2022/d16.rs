@@ -1,11 +1,12 @@
 use anyhow::{anyhow, bail};
 use hashbrown::{HashMap, HashSet};
-use pathfinding::prelude::{bfs, dijkstra};
+use pathfinding::prelude::dijkstra;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::str::FromStr;
 
 struct Cave {
+    start: Valve,
     pressures: HashMap<Valve, usize>,
     tunnels: HashMap<Valve, HashSet<Valve>>,
 }
@@ -25,17 +26,37 @@ impl FromStr for Cave {
                 .captures(line)
                 .ok_or_else(|| anyhow!("Could not capture line {}", line))?;
             let src: Valve = cap[1].parse()?;
-            pressures.insert(src.clone(), cap[2].parse()?);
+            pressures.insert(src, cap[2].parse()?);
             for dst in cap[3].split(',') {
                 let dst = dst.trim().parse()?;
-                tunnels.entry(src.clone()).or_default().insert(dst);
+                tunnels.entry(src).or_default().insert(dst);
             }
         }
-        Ok(Self { pressures, tunnels })
+        let start = "AA".parse().expect("Hard coded valve is valid");
+        Ok(Self {
+            start,
+            pressures,
+            tunnels,
+        })
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+impl Cave {
+    fn start(&self, duration_remaining: usize) -> State {
+        State {
+            elf: self.start,
+            elephant: self.start,
+            duration_remaining,
+            valves_remaining: self
+                .pressures
+                .iter()
+                .filter_map(|(v, p)| if *p != 0 { Some(*v) } else { None })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 struct Valve(u16);
 
 impl Display for Valve {
@@ -67,64 +88,57 @@ struct State {
 }
 
 impl State {
-    fn neighbors(
+    fn neighbors1(
         &self,
         valves: &HashMap<Valve, usize>,
-        distances: &HashMap<Valve, HashMap<Valve, usize>>,
-    ) -> Vec<(State, i64)> {
+        tunnels: &HashMap<Valve, HashSet<Valve>>,
+    ) -> Vec<(Self, usize)> {
         let rate_remaining: usize = self.valves_remaining.iter().map(|v| valves[v]).sum();
-        let mut result: Vec<(State, i64)> = self
-            .valves_remaining
-            .iter()
-            .filter(|valve| self.duration_remaining >= distances[&self.elf][*valve])
-            .map(|valve| {
-                let duration_remaining =
-                    self.duration_remaining - distances[&self.elf][valve] as usize;
-                (
-                    Self {
-                        elf: valve.clone(),
-                        elephant: self.elephant.clone(),
-                        duration_remaining,
-                        valves_remaining: {
-                            let mut valves = self.valves_remaining.clone();
-                            valves.retain(|v| v != valve);
-                            valves
-                        },
-                    },
-                    (rate_remaining * distances[&self.elf][valve]) as i64,
-                )
-            })
-            .collect();
+        let duration_remaining = self.duration_remaining - 1;
+        let mut result = Vec::new();
+        // elf moves
+        for elf in tunnels[&self.elf].iter() {
+            result.push((
+                Self {
+                    elf: *elf,
+                    valves_remaining: self.valves_remaining.clone(),
+                    duration_remaining,
+                    ..*self
+                },
+                rate_remaining,
+            ));
+        }
+        // elf opens
         result.push((
             Self {
-                elf: self.elf.clone(),
-                elephant: self.elephant.clone(),
-                duration_remaining: self.duration_remaining - 1,
-                valves_remaining: self.valves_remaining.clone(),
+                valves_remaining: {
+                    let mut valves = self.valves_remaining.clone();
+                    valves.retain(|v| *v != self.elf);
+                    valves
+                },
+                duration_remaining,
+                ..*self
             },
-            rate_remaining.try_into().unwrap(),
+            rate_remaining,
         ));
         result
     }
+
     fn neighbors2(
         &self,
         valves: &HashMap<Valve, usize>,
         tunnels: &HashMap<Valve, HashSet<Valve>>,
-    ) -> Vec<(State, i64)> {
-        let rate_remaining = self
-            .valves_remaining
-            .iter()
-            .map(|v| valves[v])
-            .sum::<usize>() as i64;
+    ) -> Vec<(Self, usize)> {
+        let rate_remaining = self.valves_remaining.iter().map(|v| valves[v]).sum();
         let duration_remaining = self.duration_remaining - 1;
         let mut result = Vec::new();
+        // both move
         for elf in tunnels[&self.elf].iter() {
             for elephant in tunnels[&self.elephant].iter() {
-                // Move
                 result.push((
-                    State {
-                        elf: elf.clone(),
-                        elephant: elephant.clone(),
+                    Self {
+                        elf: *elf,
+                        elephant: *elephant,
                         valves_remaining: self.valves_remaining.clone(),
                         duration_remaining,
                     },
@@ -132,46 +146,48 @@ impl State {
                 ));
             }
         }
+        // elf moves, elephant opens
         for elf in tunnels[&self.elf].iter() {
             result.push((
-                State {
-                    elf: elf.clone(),
-                    elephant: self.elephant.clone(),
+                Self {
+                    elf: *elf,
                     valves_remaining: {
                         let mut valves = self.valves_remaining.clone();
                         valves.retain(|v| *v != self.elephant);
                         valves
                     },
                     duration_remaining,
+                    ..*self
                 },
                 rate_remaining,
             ));
         }
+        // elephant moves, elf opens
         for elephant in tunnels[&self.elephant].iter() {
             result.push((
-                State {
-                    elf: self.elf.clone(),
-                    elephant: elephant.clone(),
+                Self {
+                    elephant: *elephant,
                     valves_remaining: {
                         let mut valves = self.valves_remaining.clone();
                         valves.retain(|v| *v != self.elf);
                         valves
                     },
                     duration_remaining,
+                    ..*self
                 },
                 rate_remaining,
             ));
         }
+        // both open
         result.push((
-            State {
-                elf: self.elf.clone(),
-                elephant: self.elephant.clone(),
+            Self {
                 valves_remaining: {
                     let mut valves = self.valves_remaining.clone();
                     valves.retain(|v| *v != self.elf && *v != self.elephant);
                     valves
                 },
                 duration_remaining,
+                ..*self
             },
             rate_remaining,
         ));
@@ -179,84 +195,30 @@ impl State {
     }
 }
 
-fn distance(edges: &HashMap<Valve, HashSet<Valve>>, src: &Valve, dst: &Valve) -> usize {
-    bfs(src, |t| edges[t].clone(), |t| t == dst).unwrap().len()
+fn part_x<F, IN>(cave: &Cave, start_duration: usize, successors: F) -> anyhow::Result<usize>
+where
+    F: FnMut(&State) -> IN,
+    IN: IntoIterator<Item = (State, usize)>,
+{
+    let total_pressure = start_duration * cave.pressures.values().sum::<usize>();
+    let start_state = cave.start(start_duration);
+    // TODO: Find a better way to search for the solution, perhaps a-star.
+    let (_, pressure_not_released) = dijkstra(&start_state, successors, |s| {
+        s.valves_remaining.is_empty() || s.duration_remaining == 0
+    })
+    .unwrap();
+    let pressure_released = total_pressure - pressure_not_released;
+    Ok(pressure_released)
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let cave = Cave::from_str(input)?;
-    let valve: Valve = "AA".parse().expect("Hard coded valve is valid");
-    let mut nodes = HashSet::new();
-    for (src, dsts) in cave.tunnels.iter() {
-        nodes.insert(src.clone());
-        nodes.extend(dsts.iter().cloned());
-    }
-    let mut distances: HashMap<Valve, HashMap<Valve, usize>> = HashMap::new();
-    for src in nodes.iter() {
-        for dst in nodes.iter() {
-            distances
-                .entry(src.clone())
-                .or_default()
-                .insert(dst.clone(), distance(&cave.tunnels, src, dst));
-        }
-    }
-    let total = 30 * cave.pressures.values().sum::<usize>();
-    let start = State {
-        elf: valve.clone(),
-        elephant: valve,
-        duration_remaining: 30,
-        valves_remaining: cave
-            .pressures
-            .iter()
-            .filter_map(|(v, p)| if *p != 0 { Some(v.clone()) } else { None })
-            .collect(),
-    };
-    let (_, cost) = dijkstra(
-        &start,
-        |s| s.neighbors(&cave.pressures, &distances),
-        |s| s.valves_remaining.is_empty() || s.duration_remaining == 0,
-    )
-    .unwrap();
-    let answer = total as i64 - cost;
-    Ok(answer.try_into()?)
+    part_x(&cave, 30, |s| s.neighbors1(&cave.pressures, &cave.tunnels))
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let cave = Cave::from_str(input)?;
-    let valve: Valve = "AA".parse().expect("Hard coded valve is valid");
-    let mut nodes = HashSet::new();
-    for (src, dsts) in cave.tunnels.iter() {
-        nodes.insert(src.clone());
-        nodes.extend(dsts.iter().cloned());
-    }
-    let mut distances: HashMap<Valve, HashMap<Valve, usize>> = HashMap::new();
-    for src in nodes.iter() {
-        for dst in nodes.iter() {
-            distances
-                .entry(src.clone())
-                .or_default()
-                .insert(dst.clone(), distance(&cave.tunnels, src, dst));
-        }
-    }
-    let total = 26 * cave.pressures.values().sum::<usize>();
-    let start = State {
-        elf: valve.clone(),
-        elephant: valve,
-        duration_remaining: 26,
-        valves_remaining: cave
-            .pressures
-            .iter()
-            .filter_map(|(v, p)| if *p != 0 { Some(v.clone()) } else { None })
-            .collect(),
-    };
-    let (_, cost) = dijkstra(
-        &start,
-        |s| s.neighbors2(&cave.pressures, &cave.tunnels),
-        |s| s.valves_remaining.is_empty() || s.duration_remaining == 0,
-    )
-    .unwrap();
-    let answer = total as i64 - cost;
-    Ok(answer.try_into()?)
+    part_x(&cave, 26, |s| s.neighbors2(&cave.pressures, &cave.tunnels))
 }
 
 #[cfg(test)]
