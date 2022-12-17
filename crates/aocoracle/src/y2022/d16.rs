@@ -1,35 +1,38 @@
-use std::fmt::{Display, Formatter};
 use anyhow::{anyhow, bail};
 use hashbrown::{HashMap, HashSet};
-use itertools::Itertools;
 use pathfinding::prelude::{bfs, dijkstra};
+use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::str::FromStr;
 
-fn parsed(s: &str) -> anyhow::Result<(HashMap<Valve, usize>, HashMap<Valve, HashSet<Valve>>)> {
-    let re = regex::Regex::new(
-        r"^Valve ([A-Z]{2}) has flow rate=(\d+); tunnels? leads? to valves? ([A-Z, ]+)$",
-    )
-    .expect("Hard coded regex is valid");
-    let mut pressures = HashMap::new();
-    let mut tunnels: HashMap<Valve, HashSet<Valve>> = HashMap::new();
-    for line in s.lines() {
-        let cap = re
-            .captures(line)
-            .ok_or_else(|| anyhow!("Could not capture line {}", line))?;
-        let src:Valve = cap[1].parse()?;
-        pressures.insert(src.clone(), cap[2].parse()?);
-        for dst in cap[3].split(',') {
-            let dst = dst.trim().parse()?;
-            tunnels.entry(src.clone()).or_default().insert(dst);
-        }
-    }
-    Ok((pressures, tunnels))
+struct Cave {
+    pressures: HashMap<Valve, usize>,
+    tunnels: HashMap<Valve, HashSet<Valve>>,
 }
 
-enum Action {
-    Move(Valve),
-    Open,
+impl FromStr for Cave {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let re = regex::Regex::new(
+            r"^Valve ([A-Z]{2}) has flow rate=(\d+); tunnels? leads? to valves? ([A-Z, ]+)$",
+        )
+        .expect("Hard coded regex is valid");
+        let mut pressures = HashMap::new();
+        let mut tunnels: HashMap<Valve, HashSet<Valve>> = HashMap::new();
+        for line in s.lines() {
+            let cap = re
+                .captures(line)
+                .ok_or_else(|| anyhow!("Could not capture line {}", line))?;
+            let src: Valve = cap[1].parse()?;
+            pressures.insert(src.clone(), cap[2].parse()?);
+            for dst in cap[3].split(',') {
+                let dst = dst.trim().parse()?;
+                tunnels.entry(src.clone()).or_default().insert(dst);
+            }
+        }
+        Ok(Self { pressures, tunnels })
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -37,21 +40,21 @@ struct Valve(u16);
 
 impl Display for Valve {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}",self.0 as u8 as char);
-        write!(f, "{}",(self.0>>8) as u8 as char);
+        write!(f, "{}", self.0 as u8 as char)?;
+        write!(f, "{}", (self.0 >> 8) as u8 as char)?;
         Ok(())
     }
 }
 
-impl FromStr for Valve{
+impl FromStr for Valve {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len()!= 2{
+        if s.len() != 2 {
             bail!("Expected exactly 2 bytes but got {}", s.len());
         }
         let s = s.as_bytes();
-        Ok(Self((s[0] as u16) + ((s[1] as u16)<<8)))
+        Ok(Self((s[0] as u16) + ((s[1] as u16) << 8)))
     }
 }
 
@@ -88,7 +91,6 @@ impl State {
                             valves
                         },
                     },
-                    // -((duration_remaining * valves[valve]) as i64),
                     (rate_remaining * distances[&self.elf][valve]) as i64,
                 )
             })
@@ -181,19 +183,11 @@ fn distance(edges: &HashMap<Valve, HashSet<Valve>>, src: &Valve, dst: &Valve) ->
     bfs(src, |t| edges[t].clone(), |t| t == dst).unwrap().len()
 }
 
-fn pressure_released(pressures: &HashMap<Valve, usize>, states: &[State]) -> usize {
-    states
-        .iter()
-        .unique_by(|s| s.elf.clone())
-        .map(|s| s.duration_remaining * pressures[&s.elf])
-        .sum()
-}
-
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let (pressures, tunnels) = parsed(input)?;
-    let valve:Valve = "AA".parse().unwrap();
+    let cave = Cave::from_str(input)?;
+    let valve: Valve = "AA".parse().expect("Hard coded valve is valid");
     let mut nodes = HashSet::new();
-    for (src, dsts) in tunnels.iter() {
+    for (src, dsts) in cave.tunnels.iter() {
         nodes.insert(src.clone());
         nodes.extend(dsts.iter().cloned());
     }
@@ -203,22 +197,23 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
             distances
                 .entry(src.clone())
                 .or_default()
-                .insert(dst.clone(), distance(&tunnels, src, dst));
+                .insert(dst.clone(), distance(&cave.tunnels, src, dst));
         }
     }
-    let total = 30 * pressures.values().sum::<usize>();
+    let total = 30 * cave.pressures.values().sum::<usize>();
     let start = State {
         elf: valve.clone(),
         elephant: valve,
         duration_remaining: 30,
-        valves_remaining: pressures
+        valves_remaining: cave
+            .pressures
             .iter()
             .filter_map(|(v, p)| if *p != 0 { Some(v.clone()) } else { None })
             .collect(),
     };
     let (_, cost) = dijkstra(
         &start,
-        |s| s.neighbors(&pressures, &distances),
+        |s| s.neighbors(&cave.pressures, &distances),
         |s| s.valves_remaining.is_empty() || s.duration_remaining == 0,
     )
     .unwrap();
@@ -227,10 +222,10 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let (pressures, tunnels) = parsed(input)?;
-    let valve:Valve = "AA".parse().unwrap();
+    let cave = Cave::from_str(input)?;
+    let valve: Valve = "AA".parse().expect("Hard coded valve is valid");
     let mut nodes = HashSet::new();
-    for (src, dsts) in tunnels.iter() {
+    for (src, dsts) in cave.tunnels.iter() {
         nodes.insert(src.clone());
         nodes.extend(dsts.iter().cloned());
     }
@@ -240,22 +235,23 @@ pub fn part_2(input: &str) -> anyhow::Result<usize> {
             distances
                 .entry(src.clone())
                 .or_default()
-                .insert(dst.clone(), distance(&tunnels, src, dst));
+                .insert(dst.clone(), distance(&cave.tunnels, src, dst));
         }
     }
-    let total = 26 * pressures.values().sum::<usize>();
+    let total = 26 * cave.pressures.values().sum::<usize>();
     let start = State {
         elf: valve.clone(),
         elephant: valve,
         duration_remaining: 26,
-        valves_remaining: pressures
+        valves_remaining: cave
+            .pressures
             .iter()
             .filter_map(|(v, p)| if *p != 0 { Some(v.clone()) } else { None })
             .collect(),
     };
     let (_, cost) = dijkstra(
         &start,
-        |s| s.neighbors2(&pressures, &tunnels),
+        |s| s.neighbors2(&cave.pressures, &cave.tunnels),
         |s| s.valves_remaining.is_empty() || s.duration_remaining == 0,
     )
     .unwrap();
@@ -296,7 +292,7 @@ mod tests {
     }
 
     #[test]
-    fn valve_from_string_to_string(){
+    fn valve_from_string_to_string() {
         for expected in ["AA", "AZ", "ZA", "ZZ"] {
             assert_eq!(Valve::from_str(expected).unwrap().to_string(), expected)
         }
