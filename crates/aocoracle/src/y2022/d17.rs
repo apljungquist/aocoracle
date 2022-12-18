@@ -168,17 +168,12 @@ fn print_champer(
     }
 }
 
-fn predicted_height(
-    jets: &[Jet],
-    offset_len: usize,
-    cycle_height: usize,
-    cycle_len: usize,
-) -> usize {
+fn predicted_height(jets: &[Jet], offset_len: u64, cycle_height: u64, cycle_len: u64) -> u64 {
     let num_cycle = (1000000000000 - offset_len) / cycle_len;
     let remainder = (1000000000000 - offset_len) % cycle_len;
-    let chamber = chamber(&rocks(), jets, offset_len + remainder);
+    let chamber = chamber(&rocks(), jets, (offset_len + remainder) as usize);
     let chamber_height = chamber.iter().map(|p| p.y).max().unwrap_or(0) + 1;
-    num_cycle * cycle_height + chamber_height as usize
+    num_cycle * cycle_height + chamber_height as u64
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<i64> {
@@ -189,7 +184,7 @@ pub fn part_1(input: &str) -> anyhow::Result<i64> {
     Ok(chamber_height)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<usize> {
+pub fn part_2(input: &str) -> anyhow::Result<u64> {
     let jets = jets(input)?;
     // To guarantee that the cavern repeats it seems to me that we want to run the simulation until
     // 1. the first rock starts falling together with the first jet, and
