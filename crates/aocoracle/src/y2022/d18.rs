@@ -15,54 +15,84 @@ impl Point {
     fn faces(&self) -> Vec<Face> {
         vec![
             Face {
-                point: Point {
-                    x: self.x,
-                    y: self.y,
-                    z: self.z,
+                p: Self { ..*self },
+                q: Self {
+                    x: self.x + 1,
+                    ..*self
                 },
-                axis: Axis::X,
             },
             Face {
-                point: Point {
-                    x: self.x,
-                    y: self.y,
-                    z: self.z,
+                p: Self { ..*self },
+                q: Self {
+                    y: self.y + 1,
+                    ..*self
                 },
-                axis: Axis::Y,
             },
             Face {
-                point: Point {
-                    x: self.x,
-                    y: self.y,
-                    z: self.z,
+                p: Self { ..*self },
+                q: Self {
+                    z: self.z + 1,
+                    ..*self
                 },
-                axis: Axis::Z,
             },
             Face {
-                point: Point {
+                p: Self {
                     x: self.x - 1,
-                    y: self.y,
-                    z: self.z,
+                    ..*self
                 },
-                axis: Axis::X,
+                q: Self { ..*self },
             },
             Face {
-                point: Point {
-                    x: self.x,
+                p: Self {
                     y: self.y - 1,
-                    z: self.z,
+                    ..*self
                 },
-                axis: Axis::Y,
+                q: Self { ..*self },
             },
             Face {
-                point: Point {
-                    x: self.x,
-                    y: self.y,
+                p: Self {
                     z: self.z - 1,
+                    ..*self
                 },
-                axis: Axis::Z,
+                q: Self { ..*self },
             },
         ]
+    }
+
+    fn with_neighbors(&self) -> Vec<Self> {
+        let mut result = Vec::with_capacity(9);
+        for dx in [-1, 0, 1] {
+            for dy in [-1, 0, 1] {
+                for dz in [-1, 0, 1] {
+                    result.push(Self {
+                        x: self.x + dx,
+                        y: self.y + dy,
+                        z: self.z + dz,
+                    })
+                }
+            }
+        }
+        result
+    }
+
+    fn searchable_neighbors(&self, faces: &HashSet<Face>, points: &HashSet<Self>) -> Vec<Self> {
+        let mut result = Vec::with_capacity(6);
+        for f in self.faces() {
+            let other = if f.p != *self {
+                f.p.clone()
+            } else {
+                assert_ne!(f.q, *self);
+                f.q.clone()
+            };
+            if faces.contains(&f) {
+                continue;
+            }
+            if !points.contains(&other) {
+                continue;
+            }
+            result.push(other);
+        }
+        result
     }
 }
 
@@ -79,16 +109,25 @@ fn parsed(s: &str) -> anyhow::Result<HashSet<Point>> {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-enum Axis {
-    X,
-    Y,
-    Z,
+struct Face {
+    p: Point,
+    q: Point,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-struct Face {
-    axis: Axis,
-    point: Point,
+fn clique(faces: &HashSet<Face>, points: &HashSet<Point>, start: Point) -> HashSet<Point> {
+    let mut explored = HashSet::new();
+    let mut remaining = vec![start];
+
+    while let Some(p) = remaining.pop() {
+        if explored.contains(&p) {
+            continue;
+        }
+        for q in p.searchable_neighbors(faces, points) {
+            remaining.push(q);
+        }
+        explored.insert(p);
+    }
+    explored
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
@@ -104,48 +143,6 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
     Ok(faces.len())
 }
 
-fn neighbors(f1: &Face) -> Vec<Face> {
-    let mut result = Vec::new();
-    let (dx, dy, dz) = match f1.axis {
-        Axis::X => (1, 0, 0),
-        Axis::Y => (0, 1, 0),
-        Axis::Z => (0, 0, 1),
-    };
-    let points = [
-        f1.point.clone(),
-        Point::new(f1.point.x + dx, f1.point.y + dy, f1.point.z + dz),
-    ];
-    for point in points {
-        assert!(point.faces().contains(f1));
-        for f2 in point.faces() {
-            if f1.axis != f2.axis {
-                result.push(f2);
-            }
-        }
-    }
-    assert_eq!(result.len(), 8);
-    result
-}
-
-fn connected_faces(faces: &HashSet<Face>, start: &Face) -> HashSet<Face> {
-    let mut explored = HashSet::new();
-    let mut remaining = Vec::new();
-    remaining.push(start.clone());
-
-    while let Some(f1) = remaining.pop() {
-        if explored.contains(&f1) {
-            continue;
-        }
-        for f2 in neighbors(&f1) {
-            if faces.contains(&f2) {
-                remaining.push(f2);
-            }
-        }
-        explored.insert(f1);
-    }
-    explored
-}
-
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let droplets = parsed(input)?;
     let mut faces: HashSet<_> = HashSet::new();
@@ -157,25 +154,17 @@ pub fn part_2(input: &str) -> anyhow::Result<usize> {
         }
     }
 
-    let mut starts = faces.clone();
-    let mut cliques = Vec::new();
+    let search_space: HashSet<_> = droplets.iter().flat_map(|p| p.with_neighbors()).collect();
+    let start = search_space.iter().min().unwrap().clone();
+    let accessible_points = clique(&faces, &search_space, start);
+    let accessible_faces: HashSet<_> = accessible_points
+        .iter()
+        .flat_map(|p| p.faces())
+        .filter(|f| faces.contains(f))
+        .collect();
 
-    while !starts.is_empty() {
-        let clique = connected_faces(&faces, starts.iter().next().unwrap());
-        for start in clique.iter() {
-            assert_eq!(clique, connected_faces(&faces, start));
-        }
-        for face in clique.iter() {
-            starts.remove(face);
-        }
-        cliques.push(clique);
-    }
-
-    for clique in cliques.iter() {
-        println!("{}", clique.len());
-    }
-
-    let answer = cliques.iter().map(|c| c.len()).sum();
+    let answer = accessible_faces.len();
+    println!("{}", answer);
     assert!(answer == 58 || answer < 3402);
     assert!(answer == 58 || answer > 1038);
     Ok(answer)
