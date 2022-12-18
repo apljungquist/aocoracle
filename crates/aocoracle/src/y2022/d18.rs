@@ -1,6 +1,7 @@
 use hashbrown::{HashMap, HashSet};
+use itertools::Itertools;
 
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 struct Point {
     x: i64,
     y: i64,
@@ -77,14 +78,14 @@ fn parsed(s: &str) -> anyhow::Result<HashSet<Point>> {
     Ok(result)
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 enum Axis {
     X,
     Y,
     Z,
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 struct Face {
     axis: Axis,
     point: Point,
@@ -92,23 +93,50 @@ struct Face {
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let droplets = parsed(input)?;
-    let mut counts: HashMap<Face, usize> = HashMap::new();
+    let mut faces: HashSet<_> = HashSet::new();
     for face in droplets.iter().flat_map(|p| p.faces()) {
-        *counts.entry(face).or_default() += 1;
-    }
-    let mut result = 0;
-    for (k, v) in counts {
-        match v {
-            1 => result += 1,
-            2 => {}
-            _ => panic!("Oops"),
+        if faces.contains(&face) {
+            faces.remove(&face);
+        } else {
+            faces.insert(face);
         }
     }
-    Ok(result)
+    Ok(faces.len())
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+    let droplets = parsed(input)?;
+    let mut faces: HashSet<_> = HashSet::new();
+    for face in droplets.iter().flat_map(|p| p.faces()) {
+        if faces.contains(&face) {
+            faces.remove(&face);
+        } else {
+            faces.insert(face);
+        }
+    }
+
+    let candidate_droplets: HashSet<_> = faces.iter().map(|f| f.point.clone()).collect();
+    let isolated_droplets: Vec<_> = candidate_droplets
+        .iter()
+        .filter(|d| {
+            let mut is_internal = true;
+            for f in d.faces() {
+                if !faces.contains(&f) {
+                    is_internal = false;
+                    break;
+                } else {
+                }
+            }
+            is_internal
+        })
+        .collect();
+    let air_pockets: Vec<_> = isolated_droplets
+        .iter()
+        .filter(|d| !droplets.contains(d))
+        .collect();
+    let answer = faces.len() - 6 * air_pockets.len();
+    assert!(answer == 58 || answer < 3402);
+    Ok(answer)
 }
 
 #[cfg(test)]
@@ -141,10 +169,5 @@ mod tests {
     #[test]
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
-    }
-
-    #[test]
-    fn works_on_tiny_example() {
-        let droples = [Point::new(1, 1, 1), Point::new(2, 1, 1)];
     }
 }
