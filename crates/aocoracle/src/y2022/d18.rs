@@ -104,6 +104,28 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
     Ok(faces.len())
 }
 
+fn neighbors(f1: &Face) -> Vec<Face> {
+    let mut result = Vec::new();
+    let (dx, dy, dz) = match f1.axis {
+        Axis::X => (1, 0, 0),
+        Axis::Y => (0, 1, 0),
+        Axis::Z => (0, 0, 1),
+    };
+    let points = [
+        f1.point.clone(),
+        Point::new(f1.point.x + dx, f1.point.y + dy, f1.point.z + dz),
+    ];
+    for point in points {
+        for f2 in point.faces() {
+            if f1.axis != f2.axis {
+                result.push(f2);
+            }
+        }
+    }
+    assert_eq!(result.len(), 8);
+    result
+}
+
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let droplets = parsed(input)?;
     let mut faces: HashSet<_> = HashSet::new();
@@ -115,26 +137,30 @@ pub fn part_2(input: &str) -> anyhow::Result<usize> {
         }
     }
 
-    let candidate_droplets: HashSet<_> = faces.iter().map(|f| f.point.clone()).collect();
-    let isolated_droplets: Vec<_> = candidate_droplets
-        .iter()
-        .filter(|d| {
-            let mut is_internal = true;
-            for f in d.faces() {
-                if !faces.contains(&f) {
-                    is_internal = false;
-                    break;
-                } else {
-                }
+    let mut explored = HashSet::new();
+    let mut remaining = Vec::new();
+    remaining.push(faces.iter().min().unwrap().clone());
+
+    while let Some(f1) = remaining.pop() {
+        if explored.contains(&f1) {
+            continue;
+        }
+        for f2 in neighbors(&f1) {
+            if faces.contains(&f2) {
+                remaining.push(f2);
             }
-            is_internal
-        })
-        .collect();
-    let air_pockets: Vec<_> = isolated_droplets
-        .iter()
-        .filter(|d| !droplets.contains(d))
-        .collect();
-    let answer = faces.len() - 6 * air_pockets.len();
+        }
+        println!("{} {} {} {:?}", f1.point.x, f1.point.y, f1.point.z, f1.axis);
+        explored.insert(f1);
+    }
+    println!("Not explored");
+    for f1 in faces.iter().sorted() {
+        if !explored.contains(f1) {
+            println!("{} {} {} {:?}", f1.point.x, f1.point.y, f1.point.z, f1.axis);
+        }
+    }
+
+    let answer = explored.len();
     assert!(answer == 58 || answer < 3402);
     Ok(answer)
 }
