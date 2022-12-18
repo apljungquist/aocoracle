@@ -1,69 +1,49 @@
-use hashbrown::{HashMap, HashSet};
-use itertools::Itertools;
+use anyhow::anyhow;
+use hashbrown::HashSet;
 
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-struct Point {
+struct Cube {
     x: i64,
     y: i64,
     z: i64,
 }
 
-impl Point {
+impl Cube {
     fn new(x: i64, y: i64, z: i64) -> Self {
         Self { x, y, z }
     }
+
     fn faces(&self) -> Vec<Face> {
-        vec![
-            Face {
-                p: Self { ..*self },
-                q: Self {
-                    x: self.x + 1,
-                    ..*self
+        let mut result = Vec::with_capacity(6);
+        for (dx, dy, dz) in [(0, 0, 1), (0, 1, 0), (1, 0, 0)] {
+            result.push(Face {
+                lo: self.clone(),
+                hi: Self {
+                    x: self.x + dx,
+                    y: self.y + dy,
+                    z: self.z + dz,
                 },
-            },
-            Face {
-                p: Self { ..*self },
-                q: Self {
-                    y: self.y + 1,
-                    ..*self
+            });
+            result.push(Face {
+                hi: self.clone(),
+                lo: Self {
+                    x: self.x - dx,
+                    y: self.y - dy,
+                    z: self.z - dz,
                 },
-            },
-            Face {
-                p: Self { ..*self },
-                q: Self {
-                    z: self.z + 1,
-                    ..*self
-                },
-            },
-            Face {
-                p: Self {
-                    x: self.x - 1,
-                    ..*self
-                },
-                q: Self { ..*self },
-            },
-            Face {
-                p: Self {
-                    y: self.y - 1,
-                    ..*self
-                },
-                q: Self { ..*self },
-            },
-            Face {
-                p: Self {
-                    z: self.z - 1,
-                    ..*self
-                },
-                q: Self { ..*self },
-            },
-        ]
+            });
+        }
+        result
     }
 
-    fn with_neighbors(&self) -> Vec<Self> {
-        let mut result = Vec::with_capacity(9);
+    fn neighbors(&self) -> Vec<Self> {
+        let mut result = Vec::with_capacity(8);
         for dx in [-1, 0, 1] {
             for dy in [-1, 0, 1] {
                 for dz in [-1, 0, 1] {
+                    if dx == 0 && dy == 0 && dz == 0 {
+                        continue;
+                    }
                     result.push(Self {
                         x: self.x + dx,
                         y: self.y + dy,
@@ -77,97 +57,90 @@ impl Point {
 
     fn searchable_neighbors(&self, faces: &HashSet<Face>, points: &HashSet<Self>) -> Vec<Self> {
         let mut result = Vec::with_capacity(6);
-        for f in self.faces() {
-            let other = if f.p != *self {
-                f.p.clone()
+        for face in self.faces() {
+            if faces.contains(&face) {
+                continue; // Crosses surface
+            }
+            let neighbor = if face.lo != *self {
+                face.lo
             } else {
-                assert_ne!(f.q, *self);
-                f.q.clone()
+                assert_ne!(face.hi, *self);
+                face.hi
             };
-            if faces.contains(&f) {
-                continue;
+            if !points.contains(&neighbor) {
+                continue; // Strays away from surface
             }
-            if !points.contains(&other) {
-                continue;
-            }
-            result.push(other);
+            result.push(neighbor);
         }
         result
     }
 }
 
-fn parsed(s: &str) -> anyhow::Result<HashSet<Point>> {
+fn droplet(s: &str) -> anyhow::Result<HashSet<Cube>> {
+    let re = regex::Regex::new(r"^(\d+),(\d+),(\d+)$").expect("Hard coded regex is valid");
     let mut result = HashSet::new();
     for line in s.lines() {
-        let p: Vec<_> = line.split(',').collect();
-        let x = p[0].parse()?;
-        let y = p[1].parse()?;
-        let z = p[2].parse()?;
-        result.insert(Point { x, y, z });
+        let cap = re
+            .captures(line)
+            .ok_or_else(|| anyhow!("Could not capture a cube on line {}", line))?;
+        result.insert(Cube::new(cap[1].parse()?, cap[2].parse()?, cap[3].parse()?));
     }
     Ok(result)
 }
 
+// A face can be identified by the two cubes that it touches.
+// NB. That the order is important.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 struct Face {
-    p: Point,
-    q: Point,
+    lo: Cube,
+    hi: Cube,
 }
 
-fn clique(faces: &HashSet<Face>, points: &HashSet<Point>, start: Point) -> HashSet<Point> {
-    let mut explored = HashSet::new();
+fn surface(cubes: &HashSet<Cube>) -> HashSet<Face> {
+    let mut result = HashSet::new();
+    for face in cubes.iter().flat_map(|f| f.faces()) {
+        if result.contains(&face) {
+            result.remove(&face);
+        } else {
+            result.insert(face);
+        }
+    }
+    result
+}
+
+fn clique(faces: &HashSet<Face>, points: &HashSet<Cube>, start: Cube) -> HashSet<Cube> {
+    let mut result = HashSet::new();
     let mut remaining = vec![start];
 
     while let Some(p) = remaining.pop() {
-        if explored.contains(&p) {
+        if result.contains(&p) {
             continue;
         }
         for q in p.searchable_neighbors(faces, points) {
             remaining.push(q);
         }
-        explored.insert(p);
+        result.insert(p);
     }
-    explored
+    result
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let droplets = parsed(input)?;
-    let mut faces: HashSet<_> = HashSet::new();
-    for face in droplets.iter().flat_map(|p| p.faces()) {
-        if faces.contains(&face) {
-            faces.remove(&face);
-        } else {
-            faces.insert(face);
-        }
-    }
-    Ok(faces.len())
+    let droplet = droplet(input)?;
+    let surface = surface(&droplet);
+    Ok(surface.len())
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let droplets = parsed(input)?;
-    let mut faces: HashSet<_> = HashSet::new();
-    for face in droplets.iter().flat_map(|p| p.faces()) {
-        if faces.contains(&face) {
-            faces.remove(&face);
-        } else {
-            faces.insert(face);
-        }
-    }
-
-    let search_space: HashSet<_> = droplets.iter().flat_map(|p| p.with_neighbors()).collect();
-    let start = search_space.iter().min().unwrap().clone();
-    let accessible_points = clique(&faces, &search_space, start);
-    let accessible_faces: HashSet<_> = accessible_points
+    let droplet = droplet(input)?;
+    let surface = surface(&droplet);
+    let searchable: HashSet<_> = droplet.iter().flat_map(|p| p.neighbors()).collect();
+    let start = searchable.iter().min().unwrap().clone();
+    let accessible = clique(&surface, &searchable, start)
         .iter()
-        .flat_map(|p| p.faces())
-        .filter(|f| faces.contains(f))
-        .collect();
-
-    let answer = accessible_faces.len();
-    println!("{}", answer);
-    assert!(answer == 58 || answer < 3402);
-    assert!(answer == 58 || answer > 1038);
-    Ok(answer)
+        .flat_map(|cube| cube.faces())
+        .filter(|face| surface.contains(face))
+        .count();
+    Ok(accessible)
 }
 
 #[cfg(test)]
