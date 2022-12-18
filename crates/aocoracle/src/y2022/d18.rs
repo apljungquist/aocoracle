@@ -116,6 +116,7 @@ fn neighbors(f1: &Face) -> Vec<Face> {
         Point::new(f1.point.x + dx, f1.point.y + dy, f1.point.z + dz),
     ];
     for point in points {
+        assert!(point.faces().contains(f1));
         for f2 in point.faces() {
             if f1.axis != f2.axis {
                 result.push(f2);
@@ -124,6 +125,25 @@ fn neighbors(f1: &Face) -> Vec<Face> {
     }
     assert_eq!(result.len(), 8);
     result
+}
+
+fn connected_faces(faces: &HashSet<Face>, start: &Face) -> HashSet<Face> {
+    let mut explored = HashSet::new();
+    let mut remaining = Vec::new();
+    remaining.push(start.clone());
+
+    while let Some(f1) = remaining.pop() {
+        if explored.contains(&f1) {
+            continue;
+        }
+        for f2 in neighbors(&f1) {
+            if faces.contains(&f2) {
+                remaining.push(f2);
+            }
+        }
+        explored.insert(f1);
+    }
+    explored
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
@@ -137,31 +157,27 @@ pub fn part_2(input: &str) -> anyhow::Result<usize> {
         }
     }
 
-    let mut explored = HashSet::new();
-    let mut remaining = Vec::new();
-    remaining.push(faces.iter().min().unwrap().clone());
+    let mut starts = faces.clone();
+    let mut cliques = Vec::new();
 
-    while let Some(f1) = remaining.pop() {
-        if explored.contains(&f1) {
-            continue;
+    while !starts.is_empty() {
+        let clique = connected_faces(&faces, starts.iter().next().unwrap());
+        for start in clique.iter() {
+            assert_eq!(clique, connected_faces(&faces, start));
         }
-        for f2 in neighbors(&f1) {
-            if faces.contains(&f2) {
-                remaining.push(f2);
-            }
+        for face in clique.iter() {
+            starts.remove(face);
         }
-        println!("{} {} {} {:?}", f1.point.x, f1.point.y, f1.point.z, f1.axis);
-        explored.insert(f1);
-    }
-    println!("Not explored");
-    for f1 in faces.iter().sorted() {
-        if !explored.contains(f1) {
-            println!("{} {} {} {:?}", f1.point.x, f1.point.y, f1.point.z, f1.axis);
-        }
+        cliques.push(clique);
     }
 
-    let answer = explored.len();
+    for clique in cliques.iter() {
+        println!("{}", clique.len());
+    }
+
+    let answer = cliques.iter().map(|c| c.len()).sum();
     assert!(answer == 58 || answer < 3402);
+    assert!(answer == 58 || answer > 1038);
     Ok(answer)
 }
 
