@@ -1,17 +1,11 @@
-use crate::y2022::d19::Resource::Clay;
 use anyhow::anyhow;
 use hashbrown::{HashMap, HashSet};
+use std::ops::Add;
 
 #[derive(Debug)]
 struct Blueprint {
     id: usize,
-    costs: HashMap<Resource, HashMap<Resource, usize>>,
-    // ore_per_ore: usize,
-    // ore_per_clay: usize,
-    // ore_per_obsidian: usize,
-    // clay_per_obsidian: usize,
-    // ore_per_geode: usize,
-    // obsidian_per_geode: usize,
+    costs: HashMap<Resource, Point>,
 }
 
 fn blueprints(s: &str) -> anyhow::Result<Vec<Blueprint>> {
@@ -21,40 +15,23 @@ fn blueprints(s: &str) -> anyhow::Result<Vec<Blueprint>> {
         let cap = re
             .captures(line)
             .ok_or_else(|| anyhow!("Could not capture a blueprint on line {}", line))?;
-        let mut costs = HashMap::new();
-        costs.insert(
-            Resource::Ore,
-            [(Resource::Ore, cap[2].parse()?)].into_iter().collect(),
-        );
-        costs.insert(
-            Resource::Clay,
-            [(Resource::Ore, cap[3].parse()?)].into_iter().collect(),
-        );
-        costs.insert(
-            Resource::Obsidian,
-            [
-                (Resource::Ore, cap[4].parse()?),
-                (Resource::Clay, cap[5].parse()?),
-            ]
-            .into_iter()
-            .collect(),
-        );
-        costs.insert(
-            Resource::Geode,
-            [
-                (Resource::Ore, cap[6].parse()?),
-                (Resource::Obsidian, cap[7].parse()?),
-            ]
-            .into_iter()
-            .collect(),
-        );
+
         result.push(Blueprint {
             id: cap[1].parse()?,
-            costs: costs,
-            //     ore_per_obsidian: cap[4].parse()?,
-            //     clay_per_obsidian: cap[5].parse()?,
-            //     ore_per_geode: cap[6].parse()?,
-            //     obsidian_per_geode: cap[7].parse()?,
+            costs: [
+                (Resource::Ore, Point::new(cap[2].parse()?, 0, 0, 0)),
+                (Resource::Clay, Point::new(cap[3].parse()?, 0, 0, 0)),
+                (
+                    Resource::Obsidian,
+                    Point::new(cap[4].parse()?, cap[5].parse()?, 0, 0),
+                ),
+                (
+                    Resource::Geode,
+                    Point::new(cap[6].parse()?, 0, cap[7].parse()?, 0),
+                ),
+            ]
+            .into_iter()
+            .collect(),
         });
     }
     Ok(result)
@@ -68,137 +45,139 @@ enum Resource {
     Geode,
 }
 
-fn is_affordable(has: &HashMap<Resource, usize>, needs: &HashMap<Resource, usize>) -> bool {
-    for (resource, num) in needs {
-        if has.get(resource).unwrap_or(&0) < num {
-            return false;
+impl Resource {
+    fn point(&self) -> Point {
+        match self {
+            Self::Ore => Point::new(1, 0, 0, 0),
+            Self::Clay => Point::new(0, 1, 0, 0),
+            Self::Obsidian => Point::new(0, 0, 1, 0),
+            Self::Geode => Point::new(0, 0, 0, 1),
         }
     }
-    return true;
 }
 
-fn with_production(
-    resources: &HashMap<Resource, usize>,
-    robots: &HashMap<Resource, usize>,
-) -> HashMap<Resource, usize> {
-    let mut resources = resources.clone();
-    for (robot, num) in robots.iter() {
-        *resources.entry(*robot).or_insert(0) += num;
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct Point {
+    ore: usize,
+    clay: usize,
+    obsidian: usize,
+    geode: usize,
+}
+
+impl Point {
+    fn new(ore: usize, clay: usize, obsidian: usize, geode: usize) -> Self {
+        Self {
+            ore,
+            clay,
+            obsidian,
+            geode,
+        }
     }
-    resources
 }
 
-fn without_expenditure(
-    resources: &HashMap<Resource, usize>,
-    cost: &HashMap<Resource, usize>,
-) -> HashMap<Resource, usize> {
-    let mut resources = resources.clone();
-    for (resource, num) in cost.iter() {
-        *resources.get_mut(resource).unwrap() -= num;
+impl Point {
+    fn checked_sub(&self, rhs: &Self) -> Option<Self> {
+        Some(Self {
+            ore: self.ore.checked_sub(rhs.ore)?,
+            clay: self.clay.checked_sub(rhs.clay)?,
+            obsidian: self.obsidian.checked_sub(rhs.obsidian)?,
+            geode: self.geode.checked_sub(rhs.geode)?,
+        })
     }
-    resources
 }
 
-fn unaffordable_robots(resources: &HashMap<Resource, usize>, blueprint: &Blueprint) -> Vec<Resource> {
-    [
-        Resource::Geode,
-        Resource::Obsidian,
-        Resource::Clay,
-        Resource::Ore,
-    ]
-    .into_iter()
-    .filter(|r| !is_affordable(&resources, &blueprint.costs[r]))
-    .collect()
+impl Add for Point {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            ore: self.ore + rhs.ore,
+            clay: self.clay + rhs.clay,
+            obsidian: self.obsidian + rhs.obsidian,
+            geode: self.geode + rhs.geode,
+        }
+    }
 }
 
-fn new_time_remaining(time_remaining:usize)->usize{
-    time_remaining-1
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct State {
+    resources: Point,
+    robots: Point,
 }
 
-fn num_geode(
-    blueprint: &Blueprint,
-    resources: HashMap<Resource, usize>,
-    robots: HashMap<Resource, usize>,
-    unaffordable: Vec<Resource>,
-    time_remaining: usize,
-    mut best: usize,
-) -> Option<usize> {
-    if time_remaining == 0 {
-        return Some(*resources.get(&Resource::Geode).unwrap_or(&0));
+impl State {
+    fn updated(&self, action: Option<Resource>, blueprint: &Blueprint) -> Option<Self> {
+        let removed_resources = match action {
+            Some(robot) => blueprint.costs[&robot],
+            None => Point::new(0, 0, 0, 0),
+        };
+        let added_resources = self.robots;
+        let resources = self.resources.checked_sub(&removed_resources)? + added_resources;
+
+        let added_robots = match action {
+            None => Point::new(0, 0, 0, 0),
+            Some(robot) => robot.point(),
+        };
+        let robots = self.robots + added_robots;
+
+        Some(Self { resources, robots })
     }
 
-    // Suboptimal
-    if unaffordable.is_empty() {
-        return None;
+    fn successors(&self, blueprint: &Blueprint) -> Vec<Self> {
+        [
+            Some(Resource::Geode),
+            Some(Resource::Obsidian),
+            Some(Resource::Clay),
+            Some(Resource::Obsidian),
+            None,
+        ]
+        .into_iter()
+        .filter_map(|a| self.updated(a, blueprint))
+        .collect()
     }
+}
 
-    // let new_resources = with_production(&resources, &robots);
-    let new_time_remaining = time_remaining - 1;
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            resources: Point::new(0, 0, 0, 0),
+            robots: Point::new(1, 0, 0, 0),
+        }
+    }
+}
 
-    // let num_geode_now = *resources.get(&Resource::Geode).unwrap_or(&0);
-    // let num_geode_robot_now = *resources.get(&Resource::Geode).unwrap_or(&0);
-    // let num_geode_produced = time_remaining * (2 * num_geode_robot_now + time_remaining - 1) / 2;
-    // let num_geode_end = num_geode_now + num_geode_produced;
-    // if num_geode_end <= best {
-    //     return None;
-    // }
-
-    for robot in unaffordable {
-        if is_affordable(&resources, &blueprint.costs[&robot]) {
-            let new_resources = without_expenditure(&resources, &blueprint.costs[&robot]);
-            let new_resources = with_production(&new_resources, &robots);
-
-            let mut new_robots = robots.clone();
-            *new_robots.entry(robot).or_insert(0) += 1;
-
-            let new_unaffordable = unaffordable_robots(&resources, blueprint);
-
-            if let Some(candidate) = num_geode(
-                blueprint,
-                new_resources,
-                new_robots,
-                new_unaffordable,
-                new_time_remaining,
-                best,
-            ) {
-                best = best.max(candidate);
+fn num_geode(blueprint: &Blueprint) -> Option<usize> {
+    let mut done = HashMap::new();
+    let mut todo = vec![(State::default(), 0)];
+    while let Some((state, curr_distance)) = todo.pop() {
+        if let Some(best_distance) = done.get(&state) {
+            if *best_distance <= curr_distance {
+                continue;
             }
-            break;
+        }
+        done.insert(state, curr_distance);
+        if curr_distance == 24 {
+            continue;
+        }
+        for successor in state.successors(blueprint) {
+            todo.push((successor, curr_distance + 1));
         }
     }
-    let new_resources = with_production(&resources, &robots);
-    let new_robots = robots;
-    let new_unaffordable = unaffordable_robots(&resources, blueprint);
-    if let Some(candidate) = num_geode(blueprint, new_resources, new_robots, new_unaffordable, new_time_remaining, best) {
-        best = best.max(candidate);
-    }
-    Some(best)
+    done.keys().map(|s| s.resources.geode).max()
 }
 
-// One ore-collecting robot
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let blueprints = blueprints(input)?;
     let factors: Vec<_> = blueprints
         .iter()
-        .map(|b| {
-            (
-                b.id,
-                num_geode(
-                    &b,
-                    HashMap::new(),
-                    [(Resource::Ore, 1)].into_iter().collect(),
-                    vec![Resource::Geode,Resource::Obsidian,Resource::Clay,Resource::Ore],
-                    24,
-                    0,
-                )
-                .unwrap(),
-            )
-        })
+        .map(|b| (b.id, num_geode(&b).unwrap()))
         .collect();
-    dbg!(&factors);
     let quality_levels: Vec<_> = factors.iter().map(|(i, n)| i * n).collect();
+    dbg!(&factors);
     dbg!(&quality_levels);
-    Ok(quality_levels.into_iter().sum())
+    let answer = quality_levels.into_iter().sum();
+    assert!(answer == 33 || 824 < answer);
+    Ok(answer)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
