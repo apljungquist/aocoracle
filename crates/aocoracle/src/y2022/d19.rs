@@ -1,5 +1,6 @@
 use anyhow::anyhow;
-use hashbrown::{HashMap, HashSet};
+use hashbrown::HashMap;
+use std::collections::VecDeque;
 use std::ops::Add;
 
 #[derive(Debug)]
@@ -124,28 +125,34 @@ impl State {
     }
 
     fn successors(&self, blueprint: &Blueprint, max_cost: &Point) -> Vec<Self> {
-        if self
-            .resources
-            .checked_sub(&blueprint.costs[&Resource::Geode])
-            .is_some()
-        {
-            return vec![self.updated(Some(Resource::Geode), blueprint).unwrap()];
+        // Strictly more valuable than other robots
+        if let Some(state) = self.updated(Some(Resource::Geode), blueprint) {
+            return vec![state];
         }
 
-        let mut actions = Vec::with_capacity(5);
+        let mut result = Vec::with_capacity(4);
         if self.robots.ore < max_cost.ore {
-            actions.push(Some(Resource::Ore));
+            if let Some(state) = self.updated(Some(Resource::Ore), blueprint) {
+                result.push(state);
+            }
         }
         if self.robots.clay < max_cost.clay {
-            actions.push(Some(Resource::Clay));
+            if let Some(state) = self.updated(Some(Resource::Clay), blueprint) {
+                result.push(state);
+            }
         }
         if self.robots.obsidian < max_cost.obsidian {
-            actions.push(Some(Resource::Obsidian));
+            if let Some(state) = self.updated(Some(Resource::Obsidian), blueprint) {
+                result.push(state);
+            }
         }
-        actions
-            .into_iter()
-            .filter_map(|a| self.updated(a, blueprint))
-            .collect()
+
+        // This works and cuts time in half, but I am not sure it should work.
+        // If we are very close to getting an geode robot then wouldn't waiting be advantageous?
+        if result.len() < 3 {
+            result.push(self.updated(None, blueprint).unwrap());
+        }
+        result
     }
 }
 
@@ -158,9 +165,10 @@ impl Default for State {
     }
 }
 
-fn num_geode(blueprint: &Blueprint, max_depth: usize) -> Option<usize> {
+fn num_geode(blueprint: &Blueprint, max_depth: usize) -> usize {
     let mut done = HashMap::new();
-    let mut todo = vec![(State::default(), 0)];
+    // BFS is almost twice as fast as DFS
+    let mut todo: VecDeque<_> = vec![(State::default(), 0)].into_iter().collect();
     let max_cost = Point::new(
         [
             blueprint.costs[&Resource::Clay].ore,
@@ -174,7 +182,7 @@ fn num_geode(blueprint: &Blueprint, max_depth: usize) -> Option<usize> {
         blueprint.costs[&Resource::Geode].obsidian,
         0,
     );
-    while let Some((state, curr_distance)) = todo.pop() {
+    while let Some((state, curr_distance)) = todo.pop_front() {
         if let Some(best_distance) = done.get(&state) {
             if *best_distance <= curr_distance {
                 continue;
@@ -186,33 +194,26 @@ fn num_geode(blueprint: &Blueprint, max_depth: usize) -> Option<usize> {
         }
 
         for successor in state.successors(blueprint, &max_cost) {
-            todo.push((successor, curr_distance + 1));
+            todo.push_back((successor, curr_distance + 1));
         }
     }
-    done.keys().map(|s| s.resources.geode).max()
+    done.keys()
+        .map(|s| s.resources.geode)
+        .max()
+        .expect("Done contains at least the starting state")
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let blueprints = blueprints(input)?;
-    let factors: Vec<_> = blueprints
-        .iter()
-        .map(|b| (b.id, num_geode(&b, 24).unwrap()))
-        .collect();
-    let quality_levels: Vec<_> = factors.iter().map(|(i, n)| i * n).collect();
-    let answer = quality_levels.into_iter().sum();
-    // assert!(answer == 33 || 824 < answer);
-    Ok(answer)
+    Ok(blueprints.iter().map(|b| b.id * num_geode(&b, 24)).sum())
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let blueprints = blueprints(input)?;
-    let factors: Vec<_> = blueprints[..3.min(blueprints.len())]
+    Ok(blueprints[..3.min(blueprints.len())]
         .iter()
-        .map(|b| num_geode(&b, 32).unwrap())
-        .collect();
-    dbg!(&factors);
-    let answer = factors.into_iter().product();
-    Ok(answer)
+        .map(|b| num_geode(&b, 32))
+        .product())
 }
 
 #[cfg(test)]
