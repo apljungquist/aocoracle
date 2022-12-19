@@ -128,7 +128,7 @@ impl State {
             Some(Resource::Geode),
             Some(Resource::Obsidian),
             Some(Resource::Clay),
-            Some(Resource::Obsidian),
+            Some(Resource::Ore),
             None,
         ]
         .into_iter()
@@ -149,6 +149,12 @@ impl Default for State {
 fn num_geode(blueprint: &Blueprint) -> Option<usize> {
     let mut done = HashMap::new();
     let mut todo = vec![(State::default(), 0)];
+    let max = Point::new(
+        blueprint.costs.values().map(|p| p.ore).max().unwrap(),
+        blueprint.costs.values().map(|p| p.clay).max().unwrap(),
+        blueprint.costs.values().map(|p| p.obsidian).max().unwrap(),
+        blueprint.costs.values().map(|p| p.geode).max().unwrap(),
+    );
     while let Some((state, curr_distance)) = todo.pop() {
         if let Some(best_distance) = done.get(&state) {
             if *best_distance <= curr_distance {
@@ -160,6 +166,12 @@ fn num_geode(blueprint: &Blueprint) -> Option<usize> {
             continue;
         }
         for successor in state.successors(blueprint) {
+            if successor.robots.ore > max.ore
+                || successor.robots.clay > max.clay
+                || successor.robots.obsidian > max.obsidian
+            {
+                continue;
+            }
             todo.push((successor, curr_distance + 1));
         }
     }
@@ -173,8 +185,6 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
         .map(|b| (b.id, num_geode(&b).unwrap()))
         .collect();
     let quality_levels: Vec<_> = factors.iter().map(|(i, n)| i * n).collect();
-    dbg!(&factors);
-    dbg!(&quality_levels);
     let answer = quality_levels.into_iter().sum();
     assert!(answer == 33 || 824 < answer);
     Ok(answer)
