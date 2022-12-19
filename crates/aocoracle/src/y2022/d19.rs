@@ -123,17 +123,29 @@ impl State {
         Some(Self { resources, robots })
     }
 
-    fn successors(&self, blueprint: &Blueprint) -> Vec<Self> {
-        [
-            Some(Resource::Geode),
-            Some(Resource::Obsidian),
-            Some(Resource::Clay),
-            Some(Resource::Ore),
-            None,
-        ]
-        .into_iter()
-        .filter_map(|a| self.updated(a, blueprint))
-        .collect()
+    fn successors(&self, blueprint: &Blueprint, max_cost: &Point) -> Vec<Self> {
+        if self
+            .resources
+            .checked_sub(&blueprint.costs[&Resource::Geode])
+            .is_some()
+        {
+            return vec![self.updated(Some(Resource::Geode), blueprint).unwrap()];
+        }
+
+        let mut actions = Vec::with_capacity(5);
+        if self.robots.ore < max_cost.ore {
+            actions.push(Some(Resource::Ore));
+        }
+        if self.robots.clay < max_cost.clay {
+            actions.push(Some(Resource::Clay));
+        }
+        if self.robots.obsidian < max_cost.obsidian {
+            actions.push(Some(Resource::Obsidian));
+        }
+        actions
+            .into_iter()
+            .filter_map(|a| self.updated(a, blueprint))
+            .collect()
     }
 }
 
@@ -146,14 +158,21 @@ impl Default for State {
     }
 }
 
-fn num_geode(blueprint: &Blueprint) -> Option<usize> {
+fn num_geode(blueprint: &Blueprint, max_depth: usize) -> Option<usize> {
     let mut done = HashMap::new();
     let mut todo = vec![(State::default(), 0)];
-    let max = Point::new(
-        blueprint.costs.values().map(|p| p.ore).max().unwrap(),
-        blueprint.costs.values().map(|p| p.clay).max().unwrap(),
-        blueprint.costs.values().map(|p| p.obsidian).max().unwrap(),
-        blueprint.costs.values().map(|p| p.geode).max().unwrap(),
+    let max_cost = Point::new(
+        [
+            blueprint.costs[&Resource::Clay].ore,
+            blueprint.costs[&Resource::Obsidian].ore,
+            blueprint.costs[&Resource::Geode].ore,
+        ]
+        .into_iter()
+        .max()
+        .unwrap(),
+        blueprint.costs[&Resource::Obsidian].clay,
+        blueprint.costs[&Resource::Geode].obsidian,
+        0,
     );
     while let Some((state, curr_distance)) = todo.pop() {
         if let Some(best_distance) = done.get(&state) {
@@ -162,16 +181,11 @@ fn num_geode(blueprint: &Blueprint) -> Option<usize> {
             }
         }
         done.insert(state, curr_distance);
-        if curr_distance == 24 {
+        if curr_distance == max_depth {
             continue;
         }
-        for successor in state.successors(blueprint) {
-            if successor.robots.ore > max.ore
-                || successor.robots.clay > max.clay
-                || successor.robots.obsidian > max.obsidian
-            {
-                continue;
-            }
+
+        for successor in state.successors(blueprint, &max_cost) {
             todo.push((successor, curr_distance + 1));
         }
     }
@@ -182,16 +196,23 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let blueprints = blueprints(input)?;
     let factors: Vec<_> = blueprints
         .iter()
-        .map(|b| (b.id, num_geode(&b).unwrap()))
+        .map(|b| (b.id, num_geode(&b, 24).unwrap()))
         .collect();
     let quality_levels: Vec<_> = factors.iter().map(|(i, n)| i * n).collect();
     let answer = quality_levels.into_iter().sum();
-    assert!(answer == 33 || 824 < answer);
+    // assert!(answer == 33 || 824 < answer);
     Ok(answer)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+    let blueprints = blueprints(input)?;
+    let factors: Vec<_> = blueprints[..3.min(blueprints.len())]
+        .iter()
+        .map(|b| num_geode(&b, 32).unwrap())
+        .collect();
+    dbg!(&factors);
+    let answer = factors.into_iter().product();
+    Ok(answer)
 }
 
 #[cfg(test)]
