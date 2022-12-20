@@ -16,39 +16,109 @@ fn numbers(s: &str) -> anyhow::Result<Vec<i64>> {
     Ok(result)
 }
 
-fn print_numbers(numbers: &[(usize, i64)]) {
-    for x in numbers {
-        print!("{}, ", x.1);
-    }
-    println!()
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct Node {
+    value: i64,
+    prev: usize,
+    next: usize,
 }
 
-fn move_number(mixed: &mut Vec<(usize, i64)>, id: usize) {
-    let old = mixed.iter().position(|x| x.0 == id).unwrap();
-    let number = mixed.remove(old).1;
-    let mut new = (old as i64 + number).rem_euclid(mixed.len() as i64) as usize;
-    // Keep the first element the same as in example
-    if new == 0 && number < 0 {
-        new = mixed.len();
+struct LinkedDeque {
+    nodes: Vec<Node>,
+}
+
+impl LinkedDeque {
+    fn new(xs: &[i64]) -> Self {
+        let mut nodes = Vec::with_capacity(xs.len());
+        for (i, x) in xs.iter().enumerate() {
+            nodes.push(Node {
+                value: *x,
+                prev: (i + xs.len() - 1) % xs.len(),
+                next: (i + xs.len() + 1) % xs.len(),
+            });
+        }
+        Self { nodes }
     }
-    mixed.insert(new, (id, number));
+
+    fn move_node(&mut self, id: usize) {
+        // Remove
+        let removed = self.nodes[id].clone();
+        self.nodes[removed.prev].next = removed.next;
+        self.nodes[removed.next].prev = removed.prev;
+
+        // Move
+        let rstep = removed.value.rem_euclid(self.nodes.len() as i64 - 1) as usize;
+        let lstep = self.nodes.len() - 2 - rstep;
+        let right = if rstep < lstep {
+            let mut tmp = removed.next;
+            for _ in 0..rstep {
+                tmp = self.nodes[tmp].next;
+            }
+            tmp
+        } else {
+            let mut tmp = removed.prev;
+            for _ in 0..lstep {
+                tmp = self.nodes[tmp].prev;
+            }
+            tmp
+        };
+
+        // Insert
+        let left = self.nodes[right].prev;
+        self.nodes[left].next = id;
+        self.nodes[right].prev = id;
+        self.nodes[id].next = right;
+        self.nodes[id].prev = left;
+    }
+
+    fn follow(&self, id: usize, offset: i64) -> usize {
+        let mut right = id;
+        for _ in 0..offset.rem_euclid(self.nodes.len() as i64) {
+            right = self.nodes[right].next
+        }
+        right
+    }
+
+    fn mix(&mut self) {
+        for id in 0..self.nodes.len() {
+            self.move_node(id);
+        }
+    }
+
+    fn origin(&self) -> usize {
+        self.nodes.iter().position(|n| n.value == 0).unwrap()
+    }
+
+    #[cfg(debug_assertions)]
+    fn print(&self) {
+        let origin = self.origin();
+        print!("{}", self.nodes[origin].value);
+        let mut id = self.nodes[origin].next;
+        while id != origin {
+            print!(",{}", self.nodes[id].value);
+            id = self.nodes[id].next;
+        }
+        println!();
+    }
 }
 
 fn part_x(numbers: &[i64], num_round: usize, key: i64) -> anyhow::Result<i64> {
-    let ordered: Vec<_> = numbers.iter().map(|x| x * key).collect();
-    let mut mixed: Vec<(usize, i64)> = ordered.into_iter().enumerate().collect();
-    print_numbers(&mixed);
+    let mut deque = LinkedDeque::new(&numbers.iter().map(|x| x * key).collect::<Vec<i64>>());
+    #[cfg(debug_assertions)]
+    deque.print();
     for _ in 0..num_round {
-        for id in 0..mixed.len() {
-            move_number(&mut mixed, id);
-        }
-        print_numbers(&mixed);
+        deque.mix();
+        #[cfg(debug_assertions)]
+        deque.print();
     }
-    let i = mixed.iter().position(|(_, n)| *n == 0).unwrap();
+    let zero_id = deque.origin();
+    let onek_id = deque.follow(zero_id, 1000);
+    let twok_id = deque.follow(onek_id, 1000);
+    let thrk_id = deque.follow(twok_id, 1000);
     let summands = vec![
-        mixed[(i + 1000) % mixed.len()].1,
-        mixed[(i + 2000) % mixed.len()].1,
-        mixed[(i + 3000) % mixed.len()].1,
+        deque.nodes[onek_id].value,
+        deque.nodes[twok_id].value,
+        deque.nodes[thrk_id].value,
     ];
     dbg!(&summands);
     Ok(summands.iter().sum())
@@ -109,5 +179,4 @@ mod tests {
     fn part_2_works_on_3ba7923eae() {
         assert_correct_answer_on_correct_input!(part_2, "3ba7923eae", Part::Two);
     }
-
 }
