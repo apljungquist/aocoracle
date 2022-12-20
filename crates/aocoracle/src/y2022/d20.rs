@@ -4,6 +4,9 @@ use std::collections::LinkedList;
 use std::ptr::NonNull;
 
 fn numbers(s: &str) -> anyhow::Result<Vec<i32>> {
+    // let total = s.lines().map(|l| l.parse::<i32>().unwrap()).count();
+    // let uniq = s.lines().map(|l| l.parse::<i32>().unwrap()).unique().count();
+    // assert_eq!(total,uniq);
     Ok(s.lines().map(|l| l.parse().unwrap()).collect())
 }
 
@@ -11,24 +14,21 @@ fn numbers(s: &str) -> anyhow::Result<Vec<i32>> {
 struct Node {
     prev: i32,
     next: i32,
-    curr: i32,
+    this: i32,
 }
 
 struct LinkedDeque {
-    first: i32,
     nodes: HashMap<i32, Node>,
 }
 
 impl LinkedDeque {
     fn new(data: Vec<i32>) -> Self {
-        let first = data[0];
-
         let mut nodes = HashMap::new();
         nodes.insert(
             data[0],
             Node {
                 prev: data[data.len() - 1],
-                curr: data[0],
+                this: data[0],
                 next: data[1],
             },
         );
@@ -36,27 +36,37 @@ impl LinkedDeque {
             data[data.len() - 1],
             Node {
                 prev: data[data.len() - 2],
-                curr: data[data.len() - 1],
+                this: data[data.len() - 1],
                 next: data[0],
             },
         );
         for (&prev, &curr, &next) in data.iter().tuple_windows() {
-            nodes.insert(curr, Node { prev, curr, next });
+            nodes.insert(
+                curr,
+                Node {
+                    prev,
+                    this: curr,
+                    next,
+                },
+            );
         }
-        Self { first, nodes }
+        Self { nodes }
     }
 
-    fn move_r(&mut self, x: &i32, i: i32) {
-        // Remove x
-        // Cannot borrow as mutable more than once at a time...
-        // let mut curr = self.nodes.get_mut(x).unwrap();
-        // let mut prev = self.nodes.get_mut(&curr.prev).unwrap();
-        // let mut next = self.nodes.get_mut(&curr.next).unwrap();
-        // prev.next = next.curr;
-        // next.prev = prev.curr;
-
-        //Insert x
-    }
+    // fn move_r(&mut self, x: &i32, : i32) {
+    //     // Remove x
+    //     let mut curr = self.nodes.remove(x).unwrap();
+    //     let mut prev = self.nodes.remove(&curr.prev).unwrap();
+    //     let mut next = self.nodes.remove(&curr.next).unwrap();
+    //     prev.next = next.this;
+    //     next.prev = prev.this;
+    //     self.nodes.insert(prev.this, prev);
+    //     self.nodes.insert(curr.this, curr);
+    //     self.nodes.insert(next.this, next);
+    //
+    //     //Insert x
+    //
+    // }
 }
 
 fn print_numbers(numbers: &[i32]) {
@@ -71,14 +81,17 @@ fn index(i: i32, len: usize) -> usize {
     (((i % len) + len) % len) as usize
 }
 
-fn move_number(numbers: &mut Vec<i32>, number: i32) {
-    let old = numbers.iter().position(|n| *n == number).unwrap();
+fn move_number(numbers: &mut Vec<(i32, bool)>, number: i32) {
+    let old = numbers
+        .iter()
+        .position(|(n, is_moved)| !*is_moved && *n == number)
+        .unwrap();
     numbers.remove(old);
     let mut new = index(old as i32 + number, numbers.len());
     if new == 0 && number < 0 {
         new = numbers.len();
     }
-    numbers.insert(new, number);
+    numbers.insert(new, (number, true));
     // println!(
     //     "{} moves between {} and {}",
     //     number,
@@ -89,17 +102,17 @@ fn move_number(numbers: &mut Vec<i32>, number: i32) {
 
 pub fn part_1(input: &str) -> anyhow::Result<i32> {
     let numbers = numbers(input)?;
-    let mut moved = numbers.clone();
+    let mut moved: Vec<_> = numbers.iter().map(|n| (*n, false)).collect();
     // print_numbers(&moved);
     for x in numbers {
         move_number(&mut moved, x);
         // print_numbers(&moved);
     }
-    let i = moved.iter().position(|n| *n == 0).unwrap();
+    let i = moved.iter().position(|(n, _)| *n == 0).unwrap();
     let summands = vec![
-        moved[index(i as i32 + 1000, moved.len())],
-        moved[index(i as i32 + 2000, moved.len())],
-        moved[index(i as i32 + 3000, moved.len())],
+        moved[index(i as i32 + 1000, moved.len())].0,
+        moved[index(i as i32 + 2000, moved.len())].0,
+        moved[index(i as i32 + 3000, moved.len())].0,
     ];
     dbg!(&summands);
     let answer = summands.iter().sum();
@@ -155,38 +168,38 @@ mod tests {
         assert_eq!(xs[index(10, xs.len())], 0);
     }
 
-    #[test]
-    fn move_number_works_simple() {
-        let mut xs: Vec<_> = (5..12).collect();
-        move_number(&mut xs, 5);
-        assert_eq!(xs, vec![6, 7, 8, 9, 10, 5, 11])
-    }
-
-    #[test]
-    fn move_number_works_more_than_len() {
-        let mut xs: Vec<_> = (5..12).collect();
-        move_number(&mut xs, 10);
-        assert_eq!(xs, vec![5, 6, 7, 10, 8, 9, 11])
-    }
-
-    #[test]
-    fn move_number_works_more_less_than_minus_len() {
-        let mut xs: Vec<_> = vec![1, -10, 3, 4, 5, 6, 7];
-        move_number(&mut xs, -10);
-        assert_eq!(xs, vec![1, 3, 4, -10, 5, 6, 7])
-    }
-
-    #[test]
-    fn move_number_works_exactly_end() {
-        let mut xs = vec![6, 5, 7, 8, 9, 10, 11];
-        move_number(&mut xs, 6);
-        assert_eq!(xs, vec![6, 5, 7, 8, 9, 10, 11])
-    }
-
-    #[test]
-    fn move_number_works_exactly_start() {
-        let mut xs = vec![6, -1, 7, 8, 9, 10, 11];
-        move_number(&mut xs, -1);
-        assert_eq!(xs, vec![6, 7, 8, 9, 10, 11, -1])
-    }
+    // #[test]
+    // fn move_number_works_simple() {
+    //     let mut xs: Vec<_> = (5..12).collect();
+    //     move_number(&mut xs, 5);
+    //     assert_eq!(xs, vec![6, 7, 8, 9, 10, 5, 11])
+    // }
+    //
+    // #[test]
+    // fn move_number_works_more_than_len() {
+    //     let mut xs: Vec<_> = (5..12).collect();
+    //     move_number(&mut xs, 10);
+    //     assert_eq!(xs, vec![5, 6, 7, 10, 8, 9, 11])
+    // }
+    //
+    // #[test]
+    // fn move_number_works_more_less_than_minus_len() {
+    //     let mut xs: Vec<_> = vec![1, -10, 3, 4, 5, 6, 7];
+    //     move_number(&mut xs, -10);
+    //     assert_eq!(xs, vec![1, 3, 4, -10, 5, 6, 7])
+    // }
+    //
+    // #[test]
+    // fn move_number_works_exactly_end() {
+    //     let mut xs = vec![6, 5, 7, 8, 9, 10, 11];
+    //     move_number(&mut xs, 6);
+    //     assert_eq!(xs, vec![6, 5, 7, 8, 9, 10, 11])
+    // }
+    //
+    // #[test]
+    // fn move_number_works_exactly_start() {
+    //     let mut xs = vec![6, -1, 7, 8, 9, 10, 11];
+    //     move_number(&mut xs, -1);
+    //     assert_eq!(xs, vec![6, 7, 8, 9, 10, 11, -1])
+    // }
 }
