@@ -23,15 +23,10 @@ fn print_numbers(numbers: &[(usize, i64)]) {
     println!()
 }
 
-fn index(i: i64, len: usize) -> usize {
-    let len: i64 = len as i64;
-    (((i % len) + len) % len) as usize
-}
-
 fn move_number(mixed: &mut Vec<(usize, i64)>, id: usize) {
     let old = mixed.iter().position(|x| x.0 == id).unwrap();
     let number = mixed.remove(old).1;
-    let mut new = index(old as i64 + number, mixed.len());
+    let mut new = (old as i64 + number).rem_euclid(mixed.len() as i64) as usize;
     // Keep the first element the same as in example
     if new == 0 && number < 0 {
         new = mixed.len();
@@ -51,9 +46,9 @@ fn part_x(numbers: &[i64], num_round: usize, key: i64) -> anyhow::Result<i64> {
     }
     let i = mixed.iter().position(|(_, n)| *n == 0).unwrap();
     let summands = vec![
-        mixed[index(i as i64 + 1000, mixed.len())].1,
-        mixed[index(i as i64 + 2000, mixed.len())].1,
-        mixed[index(i as i64 + 3000, mixed.len())].1,
+        mixed[(i + 1000) % mixed.len()].1,
+        mixed[(i + 2000) % mixed.len()].1,
+        mixed[(i + 3000) % mixed.len()].1,
     ];
     dbg!(&summands);
     Ok(summands.iter().sum())
@@ -115,23 +110,4 @@ mod tests {
         assert_correct_answer_on_correct_input!(part_2, "3ba7923eae", Part::Two);
     }
 
-    #[test]
-    fn index_works() {
-        let xs: Vec<_> = (0..10).collect();
-        assert_eq!(xs[index(0, xs.len())], 0);
-        assert_eq!(xs[index(10, xs.len())], 0);
-        assert_eq!(xs[index(100, xs.len())], 0);
-        assert_eq!(xs[index(-0, xs.len())], 0);
-        assert_eq!(xs[index(-10, xs.len())], 0);
-        assert_eq!(xs[index(-100, xs.len())], 0);
-        assert_eq!(xs[index(5, xs.len())], 5);
-        assert_eq!(xs[index(55, xs.len())], 5);
-        assert_eq!(xs[index(-5, xs.len())], 5);
-        assert_eq!(xs[index(-55, xs.len())], 5);
-        assert_eq!(xs[index(9, xs.len())], 9);
-        assert_eq!(xs[index(99, xs.len())], 9);
-        assert_eq!(xs[index(-1, xs.len())], 9);
-        assert_eq!(xs[index(-11, xs.len())], 9);
-        assert_eq!(xs[index(-101, xs.len())], 9);
-    }
 }
