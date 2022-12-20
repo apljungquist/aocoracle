@@ -117,9 +117,19 @@ mod tests {
     fn index_works() {
         let xs: Vec<_> = (0..10).collect();
         assert_eq!(xs[index(0, xs.len())], 0);
+        assert_eq!(xs[index(10, xs.len())], 0);
+        assert_eq!(xs[index(100, xs.len())], 0);
+        assert_eq!(xs[index(-0, xs.len())], 0);
+        assert_eq!(xs[index(-10, xs.len())], 0);
+        assert_eq!(xs[index(-100, xs.len())], 0);
+        assert_eq!(xs[index(5, xs.len())], 5);
+        assert_eq!(xs[index(55, xs.len())], 5);
+        assert_eq!(xs[index(-5, xs.len())], 5);
+        assert_eq!(xs[index(-55, xs.len())], 5);
         assert_eq!(xs[index(9, xs.len())], 9);
+        assert_eq!(xs[index(99, xs.len())], 9);
         assert_eq!(xs[index(-1, xs.len())], 9);
         assert_eq!(xs[index(-11, xs.len())], 9);
-        assert_eq!(xs[index(10, xs.len())], 0);
+        assert_eq!(xs[index(-101, xs.len())], 9);
     }
 }
