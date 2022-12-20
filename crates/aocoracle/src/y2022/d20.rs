@@ -1,129 +1,73 @@
-use hashbrown::HashMap;
-use itertools::Itertools;
-use std::collections::LinkedList;
-use std::ptr::NonNull;
-
-fn numbers(s: &str) -> anyhow::Result<Vec<i32>> {
-    // let total = s.lines().map(|l| l.parse::<i32>().unwrap()).count();
-    // let uniq = s.lines().map(|l| l.parse::<i32>().unwrap()).unique().count();
+fn numbers(s: &str) -> anyhow::Result<Vec<i64>> {
+    // let total = s.lines().map(|l| l.parse::<i64>().unwrap()).count();
+    // let uniq = s.lines().map(|l| l.parse::<i64>().unwrap()).unique().count();
     // assert_eq!(total,uniq);
+    dbg!(s
+        .lines()
+        .map(|l| l.parse::<i64>().unwrap())
+        .filter(|x| *x == 0)
+        .count());
     Ok(s.lines().map(|l| l.parse().unwrap()).collect())
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
-struct Node {
-    prev: i32,
-    next: i32,
-    this: i32,
-}
-
-struct LinkedDeque {
-    nodes: HashMap<i32, Node>,
-}
-
-impl LinkedDeque {
-    fn new(data: Vec<i32>) -> Self {
-        let mut nodes = HashMap::new();
-        nodes.insert(
-            data[0],
-            Node {
-                prev: data[data.len() - 1],
-                this: data[0],
-                next: data[1],
-            },
-        );
-        nodes.insert(
-            data[data.len() - 1],
-            Node {
-                prev: data[data.len() - 2],
-                this: data[data.len() - 1],
-                next: data[0],
-            },
-        );
-        for (&prev, &curr, &next) in data.iter().tuple_windows() {
-            nodes.insert(
-                curr,
-                Node {
-                    prev,
-                    this: curr,
-                    next,
-                },
-            );
-        }
-        Self { nodes }
-    }
-
-    // fn move_r(&mut self, x: &i32, : i32) {
-    //     // Remove x
-    //     let mut curr = self.nodes.remove(x).unwrap();
-    //     let mut prev = self.nodes.remove(&curr.prev).unwrap();
-    //     let mut next = self.nodes.remove(&curr.next).unwrap();
-    //     prev.next = next.this;
-    //     next.prev = prev.this;
-    //     self.nodes.insert(prev.this, prev);
-    //     self.nodes.insert(curr.this, curr);
-    //     self.nodes.insert(next.this, next);
-    //
-    //     //Insert x
-    //
-    // }
-}
-
-fn print_numbers(numbers: &[i32]) {
-    for x in numbers {
+fn print_numbers(numbers: &[(i64, bool)]) {
+    for (x, _) in numbers {
         print!("{}, ", x);
     }
     println!()
 }
 
-fn index(i: i32, len: usize) -> usize {
-    let len: i32 = len as i32;
+fn index(i: i64, len: usize) -> usize {
+    let len: i64 = len as i64;
     (((i % len) + len) % len) as usize
 }
 
-fn move_number(numbers: &mut Vec<(i32, bool)>, number: i32) {
-    let old = numbers
+fn move_number(mixed: &mut Vec<(i64, bool)>, number: i64) {
+    let old = mixed
         .iter()
         .position(|(n, is_moved)| !*is_moved && *n == number)
         .unwrap();
-    numbers.remove(old);
-    let mut new = index(old as i32 + number, numbers.len());
+    mixed.remove(old);
+    let mut new = index(old as i64 + number, mixed.len());
+    // Keep the order the same as in example
     if new == 0 && number < 0 {
-        new = numbers.len();
+        new = mixed.len();
     }
-    numbers.insert(new, (number, true));
-    // println!(
-    //     "{} moves between {} and {}",
-    //     number,
-    //     numbers[index(new as i32 - 1, numbers.len())],
-    //     numbers[index(new as i32 + 1, numbers.len())]
-    // );
+    mixed.insert(new, (number, true));
 }
 
-pub fn part_1(input: &str) -> anyhow::Result<i32> {
-    let numbers = numbers(input)?;
-    let mut moved: Vec<_> = numbers.iter().map(|n| (*n, false)).collect();
-    // print_numbers(&moved);
-    for x in numbers {
-        move_number(&mut moved, x);
-        // print_numbers(&moved);
+fn part_x(numbers: &[i64], num_round: usize, key: i64) -> anyhow::Result<i64> {
+    let multiplied: Vec<_> = numbers.iter().map(|x| x * key).collect();
+    let mut mixed: Vec<(i64, bool)> = multiplied.iter().map(|n| (*n, false)).collect();
+    print_numbers(&mixed);
+    for _ in 0..num_round {
+        mixed.iter_mut().for_each(|x| x.1 = false);
+        for x in multiplied.iter() {
+            move_number(&mut mixed, *x);
+        }
+        print_numbers(&mixed);
     }
-    let i = moved.iter().position(|(n, _)| *n == 0).unwrap();
+    let i = mixed.iter().position(|(n, _)| *n == 0).unwrap();
     let summands = vec![
-        moved[index(i as i32 + 1000, moved.len())].0,
-        moved[index(i as i32 + 2000, moved.len())].0,
-        moved[index(i as i32 + 3000, moved.len())].0,
+        mixed[index(i as i64 + 1000, mixed.len())].0,
+        mixed[index(i as i64 + 2000, mixed.len())].0,
+        mixed[index(i as i64 + 3000, mixed.len())].0,
     ];
     dbg!(&summands);
-    let answer = summands.iter().sum();
-    dbg!(answer);
-    assert!(answer == 3 || answer < 10797);
-    assert!(answer == 3 || answer < 3533);
-    Ok(answer)
+    Ok(summands.iter().sum())
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+pub fn part_1(input: &str) -> anyhow::Result<i64> {
+    let numbers = numbers(input)?;
+    part_x(&numbers, 1, 1)
+}
+
+pub fn part_2(input: &str) -> anyhow::Result<i64> {
+    let numbers = numbers(input)?;
+    let answer = part_x(&numbers, 10, 811589153)?;
+    dbg!(answer);
+    assert!(answer == 1623178306 || 190723450955 < answer);
+    Ok(answer)
 }
 
 #[cfg(test)]
@@ -167,39 +111,4 @@ mod tests {
         assert_eq!(xs[index(-11, xs.len())], 9);
         assert_eq!(xs[index(10, xs.len())], 0);
     }
-
-    // #[test]
-    // fn move_number_works_simple() {
-    //     let mut xs: Vec<_> = (5..12).collect();
-    //     move_number(&mut xs, 5);
-    //     assert_eq!(xs, vec![6, 7, 8, 9, 10, 5, 11])
-    // }
-    //
-    // #[test]
-    // fn move_number_works_more_than_len() {
-    //     let mut xs: Vec<_> = (5..12).collect();
-    //     move_number(&mut xs, 10);
-    //     assert_eq!(xs, vec![5, 6, 7, 10, 8, 9, 11])
-    // }
-    //
-    // #[test]
-    // fn move_number_works_more_less_than_minus_len() {
-    //     let mut xs: Vec<_> = vec![1, -10, 3, 4, 5, 6, 7];
-    //     move_number(&mut xs, -10);
-    //     assert_eq!(xs, vec![1, 3, 4, -10, 5, 6, 7])
-    // }
-    //
-    // #[test]
-    // fn move_number_works_exactly_end() {
-    //     let mut xs = vec![6, 5, 7, 8, 9, 10, 11];
-    //     move_number(&mut xs, 6);
-    //     assert_eq!(xs, vec![6, 5, 7, 8, 9, 10, 11])
-    // }
-    //
-    // #[test]
-    // fn move_number_works_exactly_start() {
-    //     let mut xs = vec![6, -1, 7, 8, 9, 10, 11];
-    //     move_number(&mut xs, -1);
-    //     assert_eq!(xs, vec![6, 7, 8, 9, 10, 11, -1])
-    // }
 }
