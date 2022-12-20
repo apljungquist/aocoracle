@@ -29,7 +29,7 @@ fn move_number(mixed: &mut Vec<(i64, bool)>, number: i64) {
         .unwrap();
     mixed.remove(old);
     let mut new = index(old as i64 + number, mixed.len());
-    // Keep the order the same as in example
+    // Keep the first element the same as in example
     if new == 0 && number < 0 {
         new = mixed.len();
     }
@@ -37,12 +37,12 @@ fn move_number(mixed: &mut Vec<(i64, bool)>, number: i64) {
 }
 
 fn part_x(numbers: &[i64], num_round: usize, key: i64) -> anyhow::Result<i64> {
-    let multiplied: Vec<_> = numbers.iter().map(|x| x * key).collect();
-    let mut mixed: Vec<(i64, bool)> = multiplied.iter().map(|n| (*n, false)).collect();
+    let ordered: Vec<_> = numbers.iter().map(|x| x * key).collect();
+    let mut mixed: Vec<(i64, bool)> = ordered.iter().map(|n| (*n, false)).collect();
     print_numbers(&mixed);
     for _ in 0..num_round {
         mixed.iter_mut().for_each(|x| x.1 = false);
-        for x in multiplied.iter() {
+        for x in ordered.iter() {
             move_number(&mut mixed, *x);
         }
         print_numbers(&mixed);
@@ -66,7 +66,8 @@ pub fn part_2(input: &str) -> anyhow::Result<i64> {
     let numbers = numbers(input)?;
     let answer = part_x(&numbers, 10, 811589153)?;
     dbg!(answer);
-    assert!(answer == 1623178306 || 190723450955 < answer);
+    // 6bb0c0bd67: answer > 190723450955
+    // 3ba7923eae: answer != -6161584849576
     Ok(answer)
 }
 
@@ -100,6 +101,16 @@ mod tests {
     #[test]
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
+    }
+
+    #[test]
+    fn part_1_works_on_3ba7923eae() {
+        assert_correct_answer_on_correct_input!(part_1, "3ba7923eae", Part::One);
+    }
+
+    #[test]
+    fn part_2_works_on_3ba7923eae() {
+        assert_correct_answer_on_correct_input!(part_2, "3ba7923eae", Part::Two);
     }
 
     #[test]
