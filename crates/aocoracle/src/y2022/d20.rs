@@ -10,9 +10,9 @@ fn numbers(s: &str) -> anyhow::Result<Vec<i64>> {
     Ok(s.lines().map(|l| l.parse().unwrap()).collect())
 }
 
-fn print_numbers(numbers: &[(i64, bool)]) {
-    for (x, _) in numbers {
-        print!("{}, ", x);
+fn print_numbers(numbers: &[(usize, i64)]) {
+    for x in numbers {
+        print!("{}, ", x.1);
     }
     println!()
 }
@@ -22,36 +22,32 @@ fn index(i: i64, len: usize) -> usize {
     (((i % len) + len) % len) as usize
 }
 
-fn move_number(mixed: &mut Vec<(i64, bool)>, number: i64) {
-    let old = mixed
-        .iter()
-        .position(|(n, is_moved)| !*is_moved && *n == number)
-        .unwrap();
-    mixed.remove(old);
+fn move_number(mixed: &mut Vec<(usize, i64)>, id: usize) {
+    let old = mixed.iter().position(|x| x.0 == id).unwrap();
+    let number = mixed.remove(old).1;
     let mut new = index(old as i64 + number, mixed.len());
     // Keep the first element the same as in example
     if new == 0 && number < 0 {
         new = mixed.len();
     }
-    mixed.insert(new, (number, true));
+    mixed.insert(new, (id, number));
 }
 
 fn part_x(numbers: &[i64], num_round: usize, key: i64) -> anyhow::Result<i64> {
     let ordered: Vec<_> = numbers.iter().map(|x| x * key).collect();
-    let mut mixed: Vec<(i64, bool)> = ordered.iter().map(|n| (*n, false)).collect();
+    let mut mixed: Vec<(usize, i64)> = ordered.into_iter().enumerate().collect();
     print_numbers(&mixed);
     for _ in 0..num_round {
-        mixed.iter_mut().for_each(|x| x.1 = false);
-        for x in ordered.iter() {
-            move_number(&mut mixed, *x);
+        for id in 0..mixed.len() {
+            move_number(&mut mixed, id);
         }
         print_numbers(&mixed);
     }
-    let i = mixed.iter().position(|(n, _)| *n == 0).unwrap();
+    let i = mixed.iter().position(|(_, n)| *n == 0).unwrap();
     let summands = vec![
-        mixed[index(i as i64 + 1000, mixed.len())].0,
-        mixed[index(i as i64 + 2000, mixed.len())].0,
-        mixed[index(i as i64 + 3000, mixed.len())].0,
+        mixed[index(i as i64 + 1000, mixed.len())].1,
+        mixed[index(i as i64 + 2000, mixed.len())].1,
+        mixed[index(i as i64 + 3000, mixed.len())].1,
     ];
     dbg!(&summands);
     Ok(summands.iter().sum())
