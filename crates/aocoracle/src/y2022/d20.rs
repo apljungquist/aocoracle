@@ -16,56 +16,52 @@ fn numbers(s: &str) -> anyhow::Result<Vec<i64>> {
     Ok(result)
 }
 
-fn print_numbers(numbers: &[(usize, i64)]) {
-    for x in numbers {
-        print!("{}, ", x.1);
-    }
-    println!()
-}
-
 fn move_number(mixed: &mut Vec<(usize, i64)>, id: usize) {
-    let old = mixed.iter().position(|x| x.0 == id).unwrap();
-    let number = mixed.remove(old).1;
-    let mut new = (old as i64 + number).rem_euclid(mixed.len() as i64) as usize;
+    let old_index = mixed
+        .iter()
+        .position(|x| x.0 == id)
+        .expect("This function is only called with valid ids");
+    let value = mixed.remove(old_index).1;
+    let mut new_index = (old_index as i64 + value).rem_euclid(mixed.len() as i64) as usize;
     // Keep the first element the same as in example
-    if new == 0 && number < 0 {
-        new = mixed.len();
+    if new_index == 0 && value < 0 {
+        new_index = mixed.len();
     }
-    mixed.insert(new, (id, number));
+    mixed.insert(new_index, (id, value));
 }
 
-fn part_x(numbers: &[i64], num_round: usize, key: i64) -> anyhow::Result<i64> {
-    let ordered: Vec<_> = numbers.iter().map(|x| x * key).collect();
-    let mut mixed: Vec<(usize, i64)> = ordered.into_iter().enumerate().collect();
-    print_numbers(&mixed);
+fn part_x(numbers: &[i64], num_round: usize, key: i64) -> i64 {
+    let mut mixed: Vec<(usize, i64)> = numbers
+        .iter()
+        .map(|value| value * key)
+        .enumerate()
+        .collect();
     for _ in 0..num_round {
         for id in 0..mixed.len() {
             move_number(&mut mixed, id);
         }
-        print_numbers(&mixed);
     }
-    let i = mixed.iter().position(|(_, n)| *n == 0).unwrap();
-    let summands = vec![
-        mixed[(i + 1000) % mixed.len()].1,
-        mixed[(i + 2000) % mixed.len()].1,
-        mixed[(i + 3000) % mixed.len()].1,
-    ];
-    dbg!(&summands);
-    Ok(summands.iter().sum())
+    let origin = mixed
+        .iter()
+        .position(|x| x.1 == 0)
+        .expect("Input validation ensures there is exactly 1 zero");
+    [
+        mixed[(origin + 1000) % mixed.len()].1,
+        mixed[(origin + 2000) % mixed.len()].1,
+        mixed[(origin + 3000) % mixed.len()].1,
+    ]
+    .iter()
+    .sum()
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<i64> {
     let numbers = numbers(input)?;
-    part_x(&numbers, 1, 1)
+    Ok(part_x(&numbers, 1, 1))
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
     let numbers = numbers(input)?;
-    let answer = part_x(&numbers, 10, 811589153)?;
-    dbg!(answer);
-    // 6bb0c0bd67: answer > 190723450955
-    // 3ba7923eae: answer != -6161584849576
-    Ok(answer)
+    Ok(part_x(&numbers, 10, 811589153))
 }
 
 #[cfg(test)]
@@ -99,15 +95,4 @@ mod tests {
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
     }
-
-    #[test]
-    fn part_1_works_on_3ba7923eae() {
-        assert_correct_answer_on_correct_input!(part_1, "3ba7923eae", Part::One);
-    }
-
-    #[test]
-    fn part_2_works_on_3ba7923eae() {
-        assert_correct_answer_on_correct_input!(part_2, "3ba7923eae", Part::Two);
-    }
-
 }
