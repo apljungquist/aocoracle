@@ -1,13 +1,19 @@
+use anyhow::{anyhow, bail};
+
 fn numbers(s: &str) -> anyhow::Result<Vec<i64>> {
-    // let total = s.lines().map(|l| l.parse::<i64>().unwrap()).count();
-    // let uniq = s.lines().map(|l| l.parse::<i64>().unwrap()).unique().count();
-    // assert_eq!(total,uniq);
-    dbg!(s
-        .lines()
-        .map(|l| l.parse::<i64>().unwrap())
-        .filter(|x| *x == 0)
-        .count());
-    Ok(s.lines().map(|l| l.parse().unwrap()).collect())
+    let re = regex::Regex::new(r"^(-?([1-9]\d*)|0)$").expect("Hard coded regex is valid");
+    let mut result = Vec::new();
+    for line in s.lines() {
+        let cap = re
+            .captures(line)
+            .ok_or_else(|| anyhow!("Could not capture number on line {}", line))?;
+        result.push(cap[1].parse()?);
+    }
+    let num_zero = result.iter().filter(|n| **n == 0).count();
+    if num_zero != 1 {
+        bail!("Expected exactly 1 zero but got {num_zero}")
+    }
+    Ok(result)
 }
 
 fn print_numbers(numbers: &[(usize, i64)]) {
