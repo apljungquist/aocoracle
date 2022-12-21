@@ -1,24 +1,40 @@
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use hashbrown::HashMap;
-use pathfinding::prelude::bfs;
+
 use std::cmp::Ordering;
 use std::str::FromStr;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-enum Operation {
+enum Operator {
     Add,
     Sub,
     Mul,
     Div,
 }
 
-impl Operation {
+impl FromStr for Operator {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "+" => Ok(Self::Add),
+            "/" => Ok(Self::Div),
+            "*" => Ok(Self::Mul),
+            "-" => Ok(Self::Sub),
+            other => Err(anyhow!(
+                "Expected operator '+', '/', '*', '-' but got {other}"
+            )),
+        }
+    }
+}
+
+impl Operator {
     fn call(&self, lhs: i128, rhs: i128) -> i128 {
         match self {
             Self::Add => lhs + rhs,
-            Self::Sub => lhs - rhs,
-            Self::Mul => lhs * rhs,
             Self::Div => lhs / rhs,
+            Self::Mul => lhs * rhs,
+            Self::Sub => lhs - rhs,
         }
     }
 }
@@ -26,105 +42,107 @@ impl Operation {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 enum Job {
     Operand(i128),
-    Expression(u32, Operation, u32),
+    Operation(Operator, u32, u32),
+}
+
+impl FromStr for Job {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.trim().parse() {
+            Ok(x) => Job::Operand(x),
+            Err(_) => {
+                let tokens: Vec<_> = s.split_whitespace().collect();
+                if tokens.len() != 3 {
+                    bail!("Expected expression with 3 token but got {}", tokens.len());
+                }
+                Job::Operation(
+                    Operator::from_str(tokens[1])?,
+                    u32::from_str_radix(tokens[0], 36)?,
+                    u32::from_str_radix(tokens[2], 36)?,
+                )
+            }
+        })
+    }
+}
+
+fn root() -> u32 {
+    u32::from_str_radix("root", 36).expect("Hard coded value is valid")
 }
 
 fn jobs(s: &str) -> anyhow::Result<HashMap<u32, Job>> {
     let mut result = HashMap::new();
     for line in s.lines() {
-        let (id, job) = line.split_once(':').unwrap();
+        let (id, job) = line
+            .split_once(':')
+            .ok_or_else(|| anyhow!("Expected exactly two parts separated by ':' but got {s}"))?;
         let id = u32::from_str_radix(id, 36)?;
-        let job = match job.trim().parse() {
-            Ok(x) => Job::Operand(x),
-            Err(_) => {
-                let mut parts = job.trim().split_whitespace();
-                Job::Expression(
-                    u32::from_str_radix(parts.next().unwrap(), 36)?,
-                    match parts.next().unwrap() {
-                        "+" => Operation::Add,
-                        "-" => Operation::Sub,
-                        "*" => Operation::Mul,
-                        "/" => Operation::Div,
-                        _ => panic!("Expected +-*/ but got"),
-                    },
-                    u32::from_str_radix(parts.next().unwrap(), 36)?,
-                )
-            }
-        };
+        let job = Job::from_str(job)?;
         result.insert(id, job);
+    }
+    if !result.contains_key(&root()) {
+        bail!("Expected expression to have a root")
     }
     Ok(result)
 }
 
 fn evaluate(jobs: &HashMap<u32, Job>, job: &u32) -> i128 {
     match jobs.get(job).unwrap() {
-        Job::Expression(lhs, op, rhs) => op.call(evaluate(jobs, &lhs), evaluate(jobs, &rhs)),
+        Job::Operation(op, lhs, rhs) => op.call(evaluate(jobs, lhs), evaluate(jobs, rhs)),
         Job::Operand(x) => *x,
     }
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<i128> {
     let jobs = jobs(input)?;
-    let root = u32::from_str_radix("root", 36)?;
-    Ok(evaluate(&jobs, &root))
+    Ok(evaluate(&jobs, &root()))
+}
+
+fn binary_search<F>(mut lo: i128, mut hi: i128, mut cmp: F) -> Option<i128>
+where
+    F: FnMut(i128) -> Ordering,
+{
+    while lo != hi {
+        let mid = (lo + hi) / 2;
+        match cmp(mid) {
+            // Always return the leftmost result
+            Ordering::Equal => hi = mid,
+            Ordering::Less => hi = mid - 1,
+            Ordering::Greater => lo = mid + 1,
+        }
+    }
+    match cmp(lo) {
+        Ordering::Equal => Some(lo),
+        Ordering::Less => None,
+        Ordering::Greater => None,
+    }
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<i128> {
     let mut jobs = jobs(input)?;
-    let root = u32::from_str_radix("root", 36)?;
     let humn = u32::from_str_radix("humn", 36)?;
-
-    let path = bfs(
-        &root,
-        |id| match jobs.get(id).unwrap() {
-            Job::Operand(_) => vec![],
-            Job::Expression(lhs, _, rhs) => vec![*lhs, *rhs],
-        },
-        |id| *id == humn,
-    )
-    .unwrap();
-
-    assert_eq!(path[0], root);
-    let (lhs, rhs) = match jobs.get(&root).unwrap() {
+    let (lhs, rhs) = match jobs.get(&root()).unwrap() {
         Job::Operand(_) => panic!("Oops"),
-        Job::Expression(lhs, _, rhs) => (lhs.clone(), rhs.clone()),
+        Job::Operation(_, lhs, rhs) => (*lhs, *rhs),
     };
-    let (target, candidate) = if path[1] == lhs {
-        (rhs, lhs)
-    } else if path[1] == rhs {
-        (lhs, rhs)
-    } else {
-        panic!("Oops");
-    };
-    let target = evaluate(&jobs, &target);
-    // let mut l = i64::MIN as i128;
-    // let mut r = 3469704905529;
-    // while l!=r {
-    //     let m = (l+r)/2;
-    //     jobs.insert(humn.clone(), Job::Operand(m));
-    //     let candidate = evaluate(&jobs, &candidate);
-    //     match candidate.cmp(&target) {
-    //         Ordering::Equal=>{
-    //             dbg!(m, target, candidate);
-    //             return Ok(m)
-    //         },
-    //         Ordering::Less=>{l=m;},
-    //         Ordering::Greater=>{r=m;},
-    //     }
-    // }
-    for x in (0..=3469704905531).rev() {
-        jobs.insert(humn.clone(), Job::Operand(x));
-        let candidate = evaluate(&jobs, &candidate);
-        if candidate != target {
-            break;
+
+    let old = evaluate(&jobs, &lhs).cmp(&evaluate(&jobs, &rhs));
+    let answer = binary_search(0, i64::MAX as i128, |x| {
+        jobs.insert(humn, Job::Operand(x));
+        let new = evaluate(&jobs, &lhs).cmp(&evaluate(&jobs, &rhs));
+        match new {
+            Ordering::Equal => Ordering::Equal,
+            new => {
+                if old == new {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                }
+            }
         }
-        println!("{x}");
-        println!("{:>20}", target);
-        println!("{:>20}", candidate);
-    }
-    // answer < 3469704905531
-    //          3469704905529
-    bail!("Search ended")
+    })
+    .unwrap();
+    Ok(answer)
 }
 
 #[cfg(test)]
