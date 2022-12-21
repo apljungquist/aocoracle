@@ -1,3 +1,4 @@
+use anyhow::bail;
 use hashbrown::HashMap;
 use std::str::FromStr;
 
@@ -65,8 +66,23 @@ pub fn part_1(input: &str) -> anyhow::Result<u64> {
     Ok(evaluate(&jobs, &"root".to_string()))
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<i64> {
-    Ok(0)
+pub fn part_2(input: &str) -> anyhow::Result<u64> {
+    let mut jobs = jobs(input)?;
+    let root = "root".to_string();
+    let humn = "humn".to_string();
+    let (lhs, rhs) = match jobs.get(&root).unwrap() {
+        Job::Operand(_) => panic!("Oops"),
+        Job::Expression(lhs, _, rhs) => (lhs.clone(), rhs.clone()),
+    };
+    let lhs = evaluate(&jobs, &lhs);
+    for x in 0.. {
+        jobs.insert(humn.clone(), Job::Operand(x));
+        let rhs = evaluate(&jobs, &rhs);
+        if lhs == rhs {
+            return Ok(x);
+        }
+    }
+    bail!("Search ended")
 }
 
 #[cfg(test)]
