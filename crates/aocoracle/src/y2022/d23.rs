@@ -144,17 +144,17 @@ pub fn part_1(input: &str) -> anyhow::Result<i32> {
     directions.push_back(Direction::E);
     let mut new = updated_map(&old, &directions);
     directions.rotate_left(1);
-    println!("== Initial State ==");
-    print_map(&old);
-    println!("== End of Round 1 ==");
-    print_map(&new);
+    // println!("== Initial State ==");
+    // print_map(&old);
+    // println!("== End of Round 1 ==");
+    // print_map(&new);
     for i in 2..=10 {
         old = new;
         new = updated_map(&old, &directions);
         directions.rotate_left(1);
         assert_eq!(old.len(), new.len());
-        println!("== End of Round {i} ==");
-        print_map(&new);
+        // println!("== End of Round {i} ==");
+        // print_map(&new);
         if old == new {
             break;
         }
@@ -169,8 +169,30 @@ pub fn part_1(input: &str) -> anyhow::Result<i32> {
     Ok(a - new.len() as i32)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<u64> {
-    Ok(0)
+pub fn part_2(input: &str) -> anyhow::Result<i32> {
+    let mut old = map(input)?;
+    let mut directions = VecDeque::with_capacity(4);
+    directions.push_back(Direction::N);
+    directions.push_back(Direction::S);
+    directions.push_back(Direction::W);
+    directions.push_back(Direction::E);
+    let mut new = updated_map(&old, &directions);
+    directions.rotate_left(1);
+    // println!("== Initial State ==");
+    // print_map(&old);
+    // println!("== End of Round 1 ==");
+    // print_map(&new);
+    let mut i = 1;
+    while old != new {
+        i += 1;
+        old = new;
+        new = updated_map(&old, &directions);
+        directions.rotate_left(1);
+        assert_eq!(old.len(), new.len());
+        // println!("== End of Round {i} ==");
+        // print_map(&new);
+    }
+    Ok(i)
 }
 
 #[cfg(test)]
