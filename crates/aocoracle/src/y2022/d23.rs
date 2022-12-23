@@ -12,6 +12,54 @@ impl Point {
     fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
+    fn north_west(&self) -> Self {
+        Self {
+            x: self.x - 1,
+            y: self.y - 1,
+        }
+    }
+    fn north(&self) -> Self {
+        Self {
+            x: self.x,
+            y: self.y - 1,
+        }
+    }
+    fn north_east(&self) -> Self {
+        Self {
+            x: self.x + 1,
+            y: self.y - 1,
+        }
+    }
+    fn west(&self) -> Self {
+        Self {
+            x: self.x - 1,
+            y: self.y,
+        }
+    }
+    fn east(&self) -> Self {
+        Self {
+            x: self.x + 1,
+            y: self.y,
+        }
+    }
+    fn south_west(&self) -> Self {
+        Self {
+            x: self.x - 1,
+            y: self.y + 1,
+        }
+    }
+    fn south(&self) -> Self {
+        Self {
+            x: self.x,
+            y: self.y + 1,
+        }
+    }
+    fn south_east(&self) -> Self {
+        Self {
+            x: self.x + 1,
+            y: self.y + 1,
+        }
+    }
 }
 
 fn map(s: &str) -> anyhow::Result<HashSet<Point>> {
@@ -37,162 +85,109 @@ enum Direction {
     E,
 }
 
-fn updated_map(old: &HashSet<Point>, directions: &VecDeque<Direction>) -> HashSet<Point> {
-    let mut intermediate: HashMap<Point, Vec<Point>> = HashMap::with_capacity(old.len());
-    'outer: for elf in old {
-        // let mut headings = Vec::with_capacity(4);
-        let nw = !old.contains(&Point::new(elf.x - 1, elf.y - 1));
-        let nn = !old.contains(&Point::new(elf.x, elf.y - 1));
-        let ne = !old.contains(&Point::new(elf.x + 1, elf.y - 1));
+fn updated_elf(map: &HashSet<Point>, directions: &VecDeque<Direction>, elf: &Point) -> Point {
+    let nw = !map.contains(&elf.north_west());
+    let nn = !map.contains(&elf.north());
+    let ne = !map.contains(&elf.north_east());
 
-        let ww = !old.contains(&Point::new(elf.x - 1, elf.y));
-        let ee = !old.contains(&Point::new(elf.x + 1, elf.y));
+    let ww = !map.contains(&elf.west());
+    let ee = !map.contains(&elf.east());
 
-        let sw = !old.contains(&Point::new(elf.x - 1, elf.y + 1));
-        let ss = !old.contains(&Point::new(elf.x, elf.y + 1));
-        let se = !old.contains(&Point::new(elf.x + 1, elf.y + 1));
-        if nw && nn && ne && ww && ee && sw && ss && se {
-            intermediate
-                .entry(elf.clone())
-                .or_default()
-                .push(elf.clone());
-        } else {
-            for d in directions {
-                match d {
-                    Direction::N => {
-                        if nn && ne && nw {
-                            intermediate
-                                .entry(Point::new(elf.x, elf.y - 1))
-                                .or_default()
-                                .push(elf.clone());
-                            continue 'outer;
-                        }
+    let sw = !map.contains(&elf.south_west());
+    let ss = !map.contains(&elf.south());
+    let se = !map.contains(&elf.south_east());
+    if nw && nn && ne && ww && ee && sw && ss && se {
+        elf.clone()
+    } else {
+        for direction in directions {
+            match direction {
+                Direction::N => {
+                    if nn && ne && nw {
+                        return elf.north();
                     }
-                    Direction::S => {
-                        if ss && se && sw {
-                            intermediate
-                                .entry(Point::new(elf.x, elf.y + 1))
-                                .or_default()
-                                .push(elf.clone());
-                            continue 'outer;
-                        }
+                }
+                Direction::S => {
+                    if ss && se && sw {
+                        return elf.south();
                     }
-                    Direction::W => {
-                        if ww && nw && sw {
-                            intermediate
-                                .entry(Point::new(elf.x - 1, elf.y))
-                                .or_default()
-                                .push(elf.clone());
-                            continue 'outer;
-                        }
+                }
+                Direction::W => {
+                    if ww && nw && sw {
+                        return elf.west();
                     }
-                    Direction::E => {
-                        if ee && ne && se {
-                            intermediate
-                                .entry(Point::new(elf.x + 1, elf.y))
-                                .or_default()
-                                .push(elf.clone());
-                            continue 'outer;
-                        }
+                }
+                Direction::E => {
+                    if ee && ne && se {
+                        return elf.east();
                     }
                 }
             }
-            intermediate
-                .entry(elf.clone())
-                .or_default()
-                .push(elf.clone());
         }
+        elf.clone()
     }
-    let mut new = HashSet::with_capacity(old.len());
-    for (proposed, elfs) in intermediate.drain() {
+}
+
+fn updated_map(before: &HashSet<Point>, directions: &VecDeque<Direction>) -> HashSet<Point> {
+    let mut during: HashMap<Point, Vec<Point>> = HashMap::with_capacity(before.len());
+    for elf in before {
+        during
+            .entry(updated_elf(before, directions, elf))
+            .or_default()
+            .push(elf.clone());
+    }
+    let mut after = HashSet::with_capacity(before.len());
+    for (proposed, elfs) in during.drain() {
         if elfs.len() > 1 {
             for elf in elfs {
-                new.insert(elf);
+                after.insert(elf);
             }
         } else {
-            assert_eq!(elfs.len(), 1);
-            new.insert(proposed);
+            after.insert(proposed);
         }
     }
-    new
+    after
 }
 
-fn print_map(map: &HashSet<Point>) {
-    let min_x = map.iter().map(|p| p.x).min().unwrap();
-    let max_x = map.iter().map(|p| p.x).max().unwrap();
-    let min_y = map.iter().map(|p| p.y).min().unwrap();
-    let max_y = map.iter().map(|p| p.y).max().unwrap();
-    for y in min_y..=max_y {
-        for x in min_x..=max_x {
-            if map.contains(&Point::new(x, y)) {
-                print!("#");
-            } else {
-                print!(".");
-            }
-        }
-        println!();
-    }
-    println!();
-}
+fn simulate(map: HashSet<Point>, num_step: Option<usize>) -> (usize, HashSet<Point>) {
+    let mut directions: VecDeque<_> = [Direction::N, Direction::S, Direction::W, Direction::E]
+        .into_iter()
+        .collect();
 
-pub fn part_1(input: &str) -> anyhow::Result<i32> {
-    let mut old = map(input)?;
-    let mut directions = VecDeque::with_capacity(4);
-    directions.push_back(Direction::N);
-    directions.push_back(Direction::S);
-    directions.push_back(Direction::W);
-    directions.push_back(Direction::E);
+    let mut old = map;
     let mut new = updated_map(&old, &directions);
     directions.rotate_left(1);
-    // println!("== Initial State ==");
-    // print_map(&old);
-    // println!("== End of Round 1 ==");
-    // print_map(&new);
-    for i in 2..=10 {
-        old = new;
-        new = updated_map(&old, &directions);
-        directions.rotate_left(1);
-        assert_eq!(old.len(), new.len());
-        // println!("== End of Round {i} ==");
-        // print_map(&new);
-        if old == new {
-            break;
-        }
-    }
-    let min_x = new.iter().map(|p| p.x).min().unwrap();
-    let max_x = new.iter().map(|p| p.x).max().unwrap();
-    let min_y = new.iter().map(|p| p.y).min().unwrap();
-    let max_y = new.iter().map(|p| p.y).max().unwrap();
-    let w = max_x - min_x + 1;
-    let h = max_y - min_y + 1;
-    let a = w * h;
-    Ok(a - new.len() as i32)
-}
 
-pub fn part_2(input: &str) -> anyhow::Result<i32> {
-    let mut old = map(input)?;
-    let mut directions = VecDeque::with_capacity(4);
-    directions.push_back(Direction::N);
-    directions.push_back(Direction::S);
-    directions.push_back(Direction::W);
-    directions.push_back(Direction::E);
-    let mut new = updated_map(&old, &directions);
-    directions.rotate_left(1);
-    // println!("== Initial State ==");
-    // print_map(&old);
-    // println!("== End of Round 1 ==");
-    // print_map(&new);
     let mut i = 1;
-    while old != new {
+    while new != old && Some(i) != num_step {
         i += 1;
         old = new;
         new = updated_map(&old, &directions);
         directions.rotate_left(1);
-        assert_eq!(old.len(), new.len());
-        // println!("== End of Round {i} ==");
-        // print_map(&new);
     }
-    Ok(i)
+    (i, new)
+}
+
+fn num_empty_tile(map: &HashSet<Point>) -> Option<usize> {
+    let min_x = map.iter().map(|p| p.x).min()?;
+    let max_x = map.iter().map(|p| p.x).max()?;
+    let min_y = map.iter().map(|p| p.y).min()?;
+    let max_y = map.iter().map(|p| p.y).max()?;
+    let w = (max_x - min_x + 1) as usize;
+    let h = (max_y - min_y + 1) as usize;
+    let a = w * h;
+    Some(a - map.len())
+}
+
+pub fn part_1(input: &str) -> anyhow::Result<usize> {
+    let before = map(input)?;
+    let (_, after) = simulate(before, Some(10));
+    Ok(num_empty_tile(&after).expect("Validation ensures there is at least one elf on the map"))
+}
+
+pub fn part_2(input: &str) -> anyhow::Result<usize> {
+    let before = map(input)?;
+    let (num_step, _) = simulate(before, None);
+    Ok(num_step)
 }
 
 #[cfg(test)]
@@ -222,6 +217,9 @@ mod tests {
         assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
     }
 
+    // Fails on 2015/18/3ba7923eae and possibly others
+    // That is rectangular grid of '#' and '.', just as the input to this problem.
+    #[ignore]
     #[test]
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
