@@ -72,6 +72,8 @@ impl<'a> Iterator for GridIterator<'a> {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct State {
+    reached_goal: bool,
+    reached_start: bool,
     start: (usize, usize),
     elf: (usize, usize),
     goal: (usize, usize),
@@ -129,6 +131,8 @@ impl FromStr for State {
         }
 
         Ok(Self {
+            reached_goal: false,
+            reached_start: false,
             elf: (x_start, y_min - 1),
             start: (x_start, y_min - 1),
             goal: (x_goal, y_max + 1),
@@ -192,6 +196,8 @@ impl State {
             }
         }
         Self {
+            reached_goal: self.reached_goal,
+            reached_start: self.reached_start,
             elf: self.elf,
             start: self.start,
             goal: self.goal,
@@ -210,6 +216,9 @@ impl State {
         if self.elf.1 > 0 && self.is_available(self.elf.0, self.elf.1 - 1) {
             let mut result = self.clone();
             result.elf.1 -= 1;
+            result.reached_goal = self.reached_goal || result.elf == self.goal;
+            result.reached_start =
+                self.reached_goal && (self.reached_start || result.elf == self.start);
             Some(result)
         } else {
             None
@@ -219,6 +228,9 @@ impl State {
         if self.is_available(self.elf.0, self.elf.1 + 1) {
             let mut result = self.clone();
             result.elf.1 += 1;
+            result.reached_goal = self.reached_goal || result.elf == self.goal;
+            result.reached_start =
+                self.reached_goal && (self.reached_start || result.elf == self.start);
             Some(result)
         } else {
             None
@@ -277,6 +289,20 @@ impl State {
     }
     fn success(&self) -> bool {
         self.elf == self.goal
+    }
+
+    fn heuristic2(&self) -> usize {
+        match (self.reached_goal, self.reached_start) {
+            (false, false) => manhattan(self.elf, self.goal) + manhattan(self.start, self.goal) * 2,
+            (true, false) => manhattan(self.elf, self.start) + manhattan(self.start, self.goal),
+            (true, true) => manhattan(self.elf, self.goal),
+            _ => {
+                panic!("Oops");
+            }
+        }
+    }
+    fn success2(&self) -> bool {
+        self.reached_goal && self.reached_start && self.elf == self.goal
     }
 
     fn print(&self, label: &str) {
@@ -341,62 +367,33 @@ impl State {
     }
 }
 
+fn manhattan(start: (usize, usize), goal: (usize, usize)) -> usize {
+    start.0.abs_diff(goal.0) + start.1.abs_diff(goal.1)
+}
+
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
     let start = State::from_str(input)?;
 
-    // let mut state = start.clone();
-    // state.print("Initial state");
-    // state = state.updated_blizzards().moved_down().unwrap();
-    // state.print("Minute 1, move down");
-    // state = state.updated_blizzards().moved_down().unwrap();
-    // state.print("Minute 2, move down");
-    // state = state.updated_blizzards().wait().unwrap();
-    // state.print("Minute 3, wait");
-    // state = state.updated_blizzards().moved_up().unwrap();
-    // state.print("Minute 4, move up");
-    // state = state.updated_blizzards().moved_right().unwrap();
-    // state.print("Minute 5, move right");
-    // state = state.updated_blizzards().moved_right().unwrap();
-    // state.print("Minute 6, move right");
-    // state = state.updated_blizzards().moved_down().unwrap();
-    // state.print("Minute 7, move down");
-    // state = state.updated_blizzards().moved_left().unwrap();
-    // state.print("Minute 8, move left");
-    // state = state.updated_blizzards().moved_up().unwrap();
-    // state.print("Minute 9, move up");
-    // state = state.updated_blizzards().moved_right().unwrap();
-    // state.print("Minute 10, move right");
-    // state = state.updated_blizzards().wait().unwrap();
-    // state.print("Minute 11, wait");
-    // state = state.updated_blizzards().moved_down().unwrap();
-    // state.print("Minute 12, move down");
-    // state = state.updated_blizzards().moved_down().unwrap();
-    // state.print("Minute 13, move down");
-    // state = state.updated_blizzards().moved_right().unwrap();
-    // state.print("Minute 14, move right");
-    // state = state.updated_blizzards().moved_right().unwrap();
-    // state.print("Minute 15, move right");
-    // state = state.updated_blizzards().moved_right().unwrap();
-    // state.print("Minute 16, move right");
-    // state = state.updated_blizzards().moved_down().unwrap();
-    // state.print("Minute 17, move down");
-    // state = state.updated_blizzards().moved_down().unwrap();
-    // state.print("Minute 18, move down");
-    let (path, cost) = astar(
+    let (_, cost) = astar(
         &start,
         |s| s.neighbors(),
         |s| s.heuristic(),
         |s| s.success(),
     )
     .unwrap();
-    // for (i, state) in path.iter().enumerate() {
-    //     state.print(&format!("Minute {i}"))
-    // }
     Ok(cost)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+    let start = State::from_str(input)?;
+    let (_, cost) = astar(
+        &start,
+        |s| s.neighbors(),
+        |s| s.heuristic2(),
+        |s| s.success2(),
+    )
+    .unwrap();
+    Ok(cost)
 }
 
 #[cfg(test)]
