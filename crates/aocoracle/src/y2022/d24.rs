@@ -1,113 +1,65 @@
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use hashbrown::HashSet;
-use pathfinding::prelude::{astar, dijkstra};
+use pathfinding::prelude::astar;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct Grid {
-    data: Vec<bool>,
-    x_min: usize,
-    y_min: usize,
-    width: usize,
-}
-
-impl Grid {
-    fn new(x_min: usize, x_max: usize, y_min: usize, y_max: usize) -> Self {
-        let width = x_max - x_min + 1;
-        let height = y_max - y_min + 1;
-        Self {
-            data: vec![false; width * height],
-            x_min,
-            y_min,
-            width,
-        }
-    }
-    fn insert(&mut self, location: (usize, usize)) {
-        let row = (location.1 - self.y_min);
-        let col = (location.0 - self.x_min);
-        self.data[row * self.width + col] = true;
-    }
-    fn contains(&self, location: &(usize, usize)) -> bool {
-        let row = (location.1 - self.y_min);
-        let col = (location.0 - self.x_min);
-        self.data[row * self.width + col]
-    }
-    fn empty_like(&self) -> Self {
-        Self {
-            data: vec![false; self.data.len()],
-            x_min: self.x_min,
-            y_min: self.y_min,
-            width: self.width,
-        }
-    }
-    fn iter(&self) -> GridIterator {
-        GridIterator { grid: self, i: 0 }
-    }
-}
-
-struct GridIterator<'a> {
-    grid: &'a Grid,
-    i: usize,
-}
-
-impl<'a> Iterator for GridIterator<'a> {
-    type Item = (usize, usize);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        while !self.grid.data.get(self.i).unwrap_or(&true) {
-            self.i += 1;
-        }
-        if self.i == self.grid.data.len() {
-            return None;
-        }
-
-        let row = self.i / self.grid.width;
-        let col = self.i % self.grid.width;
-        let x = col + self.grid.x_min;
-        let y = row + self.grid.y_min;
-        self.i += 1;
-        Some((x, y))
-    }
-}
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-struct State {
-    reached_goal: bool,
-    reached_start: bool,
+#[derive(Debug)]
+struct Map {
     start: (usize, usize),
-    elf: (usize, usize),
     goal: (usize, usize),
-    up: Grid,
-    down: Grid,
-    left: Grid,
-    right: Grid,
+    up: HashSet<(usize, usize)>,
+    down: HashSet<(usize, usize)>,
+    left: HashSet<(usize, usize)>,
+    right: HashSet<(usize, usize)>,
     x_min: usize,
     x_max: usize,
     y_min: usize,
     y_max: usize,
 }
 
-impl FromStr for State {
+impl FromStr for Map {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let lines: Vec<_> = s.lines().collect();
         let x_min = 1;
-        let x_max = lines[0].len() - 2;
+        let x_max = lines[0]
+            .len()
+            .checked_sub(2)
+            .ok_or_else(|| anyhow!("Expected rectangular input with sides no shorter than 3"))?;
         let y_min = 1;
-        let y_max = lines.len() - 2;
-        let x_start = lines[0].chars().position(|char| char == '.').unwrap();
+        let y_max = lines
+            .len()
+            .checked_sub(2)
+            .ok_or_else(|| anyhow!("Expected rectangular input with sides no shorter than 3"))?;
+        let x_start = lines[0]
+            .chars()
+            .position(|char| char == '.')
+            .ok_or_else(|| anyhow!("Expected start tile on first line"))?;
         let x_goal = lines[lines.len() - 1]
             .chars()
             .position(|char| char == '.')
-            .unwrap();
+            .ok_or_else(|| anyhow!("Expected goal tile on last line"))?;
 
-        let mut up = Grid::new(x_min, x_max, y_min, y_max);
-        let mut down = Grid::new(x_min, x_max, y_min, y_max);
-        let mut left = Grid::new(x_min, x_max, y_min, y_max);
-        let mut right = Grid::new(x_min, x_max, y_min, y_max);
+        if x_max < 1 || y_max < 1 {
+            bail!("Expected rectangular input with sides no shorter than 3");
+        }
+
+        let mut up = HashSet::new();
+        let mut down = HashSet::new();
+        let mut left = HashSet::new();
+        let mut right = HashSet::new();
         for (y, line) in lines.iter().enumerate() {
             for (x, char) in line.chars().enumerate() {
+                if y == y_min - 1 || y == y_max + 1 {
+                    continue;
+                }
+                if x == x_min - 1 || x == x_max + 1 {
+                    if char != '#' {
+                        bail!("Expected wall on first and last column");
+                    }
+                    continue;
+                }
                 match char {
                     '^' => {
                         up.insert((x, y));
@@ -122,18 +74,14 @@ impl FromStr for State {
                         right.insert((x, y));
                     }
                     '.' => {}
-                    '#' => {}
                     _ => {
-                        bail!("Expected ^v<> but got {char}");
+                        bail!("Expected one of '^', 'v', '<', '>', or '.' but got {char}");
                     }
                 }
             }
         }
 
         Ok(Self {
-            reached_goal: false,
-            reached_start: false,
-            elf: (x_start, y_min - 1),
             start: (x_start, y_min - 1),
             goal: (x_goal, y_max + 1),
             up,
@@ -148,96 +96,112 @@ impl FromStr for State {
     }
 }
 
-impl State {
-    fn is_available(&self, x: usize, y: usize) -> bool {
-        (self.start.0 == x && self.start.1 == y)
-            || (self.goal.0 == x && self.goal.1 == y)
-            || (self.x_min <= x
-                && x <= self.x_max
-                && self.y_min <= y
-                && y <= self.y_max
-                && !self.up.contains(&(x, y))
-                && !self.down.contains(&(x, y))
-                && !self.left.contains(&(x, y))
-                && !self.right.contains(&(x, y)))
+impl Map {
+    fn tile(&self, x: usize, y: usize, t: usize) -> Option<&'static str> {
+        let up = wrapping_add(y, t, self.y_min, self.y_max);
+        let down = wrapping_sub(y, t, self.y_min, self.y_max);
+        let right = wrapping_sub(x, t, self.x_min, self.x_max);
+        let left = wrapping_add(x, t, self.x_min, self.x_max);
+
+        let mut blizzards = Vec::with_capacity(4);
+        if self.up.contains(&(x, up)) {
+            blizzards.push("^");
+        }
+        if self.down.contains(&(x, down)) {
+            blizzards.push("v");
+        }
+        if self.left.contains(&(left, y)) {
+            blizzards.push("<");
+        }
+        if self.right.contains(&(right, y)) {
+            blizzards.push(">");
+        }
+
+        match blizzards.len() {
+            0 => None,
+            1 => Some(blizzards[0]),
+            2 => Some("2"),
+            3 => Some("3"),
+            4 => Some("4"),
+            _ => {
+                panic!("Oops");
+            }
+        }
     }
 
-    fn updated_blizzards(&self) -> Self {
-        let mut up = self.up.empty_like();
-        let mut down = self.down.empty_like();
-        let mut left = self.left.empty_like();
-        let mut right = self.right.empty_like();
-        for (x, y) in self.up.iter() {
-            if y == self.y_min {
-                up.insert((x, self.y_max));
-            } else {
-                up.insert((x, y - 1));
-            }
+    fn is_available(&self, x: usize, y: usize, t: usize) -> bool {
+        if self.start == (x, y) || self.goal == (x, y) {
+            return true;
         }
-        for (x, y) in self.down.iter() {
-            if y == self.y_max {
-                down.insert((x, self.y_min));
-            } else {
-                down.insert((x, y + 1));
-            }
+
+        if !(self.x_min <= x && x <= self.x_max && self.y_min <= y && y <= self.y_max) {
+            return false;
         }
-        for (x, y) in self.left.iter() {
-            if x == self.x_min {
-                left.insert((self.x_max, y));
-            } else {
-                left.insert((x - 1, y));
-            }
-        }
-        for (x, y) in self.right.iter() {
-            if x == self.x_max {
-                right.insert((self.x_min, y));
-            } else {
-                right.insert((x + 1, y));
-            }
-        }
-        Self {
+        self.tile(x, y, t).is_none()
+    }
+}
+
+fn wrapping_add(lhs: usize, rhs: usize, min: usize, max: usize) -> usize {
+    let i = lhs - min;
+    let modulus = max - min + 1;
+    let j = (i + rhs) % modulus;
+    j + min
+}
+
+fn wrapping_sub(lhs: usize, rhs: usize, min: usize, max: usize) -> usize {
+    let i = lhs - min;
+    let modulus = max - min + 1;
+    let j = ((i + modulus) - (rhs % modulus)) % modulus;
+    j + min
+}
+
+fn manhattan(start: (usize, usize), goal: (usize, usize)) -> usize {
+    start.0.abs_diff(goal.0) + start.1.abs_diff(goal.1)
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct State {
+    reached_goal: bool,
+    reached_start: bool,
+    elf: (usize, usize),
+    t: usize,
+}
+
+impl State {
+    fn updated_blizzards(&self) -> State {
+        State {
             reached_goal: self.reached_goal,
             reached_start: self.reached_start,
             elf: self.elf,
-            start: self.start,
-            goal: self.goal,
-            up,
-            down,
-            left,
-            right,
-            x_min: self.x_min,
-            x_max: self.x_max,
-            y_min: self.y_min,
-            y_max: self.y_max,
+            t: self.t + 1,
         }
     }
-
-    fn moved_up(&self) -> Option<Self> {
-        if self.elf.1 > 0 && self.is_available(self.elf.0, self.elf.1 - 1) {
+    fn moved_up(&self, map: &Map) -> Option<Self> {
+        if self.elf.1 > 0 && map.is_available(self.elf.0, self.elf.1 - 1, self.t) {
             let mut result = self.clone();
             result.elf.1 -= 1;
-            result.reached_goal = self.reached_goal || result.elf == self.goal;
+            result.reached_goal = self.reached_goal || result.elf == map.goal;
             result.reached_start =
-                self.reached_goal && (self.reached_start || result.elf == self.start);
+                self.reached_goal && (self.reached_start || result.elf == map.start);
             Some(result)
         } else {
             None
         }
     }
-    fn moved_down(&self) -> Option<Self> {
-        if self.is_available(self.elf.0, self.elf.1 + 1) {
+    fn moved_down(&self, map: &Map) -> Option<Self> {
+        if map.is_available(self.elf.0, self.elf.1 + 1, self.t) {
             let mut result = self.clone();
             result.elf.1 += 1;
-            result.reached_goal = self.reached_goal || result.elf == self.goal;
+            result.reached_goal = self.reached_goal || result.elf == map.goal;
             result.reached_start =
-                self.reached_goal && (self.reached_start || result.elf == self.start);
+                self.reached_goal && (self.reached_start || result.elf == map.start);
             Some(result)
         } else {
             None
         }
     }
-    fn moved_left(&self) -> Option<Self> {
-        if self.is_available(self.elf.0 - 1, self.elf.1) {
+    fn moved_left(&self, map: &Map) -> Option<Self> {
+        if map.is_available(self.elf.0 - 1, self.elf.1, self.t) {
             let mut result = self.clone();
             result.elf.0 -= 1;
             Some(result)
@@ -245,8 +209,8 @@ impl State {
             None
         }
     }
-    fn moved_right(&self) -> Option<Self> {
-        if self.is_available(self.elf.0 + 1, self.elf.1) {
+    fn moved_right(&self, map: &Map) -> Option<Self> {
+        if map.is_available(self.elf.0 + 1, self.elf.1, self.t) {
             let mut result = self.clone();
             result.elf.0 += 1;
             Some(result)
@@ -254,109 +218,97 @@ impl State {
             None
         }
     }
-    fn wait(self) -> Option<Self> {
-        if self.is_available(self.elf.0, self.elf.1) {
+    fn wait(self, map: &Map) -> Option<Self> {
+        if map.is_available(self.elf.0, self.elf.1, self.t) {
             Some(self)
         } else {
             None
         }
     }
 
-    fn neighbors(&self) -> Vec<(Self, usize)> {
-        let COST = 1;
-        let mut partial = self.updated_blizzards();
+    fn neighbors(&self, map: &Map) -> Vec<(State, usize)> {
+        let cost = 1;
+        let partial = self.updated_blizzards();
         let mut result = Vec::new();
-        if let Some(state) = partial.moved_up() {
-            result.push((state, COST));
+        if let Some(state) = partial.moved_up(map) {
+            result.push((state, cost));
         }
-        if let Some(state) = partial.moved_down() {
-            result.push((state, COST));
+        if let Some(state) = partial.moved_down(map) {
+            result.push((state, cost));
         }
-        if let Some(state) = partial.moved_left() {
-            result.push((state, COST));
+        if let Some(state) = partial.moved_left(map) {
+            result.push((state, cost));
         }
-        if let Some(state) = partial.moved_right() {
-            result.push((state, COST));
+        if let Some(state) = partial.moved_right(map) {
+            result.push((state, cost));
         }
-        if let Some(state) = partial.wait() {
-            result.push((state, COST));
+        if let Some(state) = partial.wait(map) {
+            result.push((state, cost));
         }
         result
     }
 
-    fn heuristic(&self) -> usize {
-        self.elf.0.abs_diff(self.goal.0) + self.elf.1.abs_diff(self.goal.1)
-    }
-    fn success(&self) -> bool {
-        self.elf == self.goal
+    fn start_state(map: &Map) -> Self {
+        Self {
+            reached_goal: false,
+            reached_start: false,
+            elf: map.start,
+            t: 0,
+        }
     }
 
-    fn heuristic2(&self) -> usize {
+    fn heuristic(&self, map: &Map) -> usize {
+        manhattan(self.elf, map.goal)
+    }
+    fn success(&self, map: &Map) -> bool {
+        self.elf == map.goal
+    }
+
+    fn heuristic2(&self, map: &Map) -> usize {
         match (self.reached_goal, self.reached_start) {
-            (false, false) => manhattan(self.elf, self.goal) + manhattan(self.start, self.goal) * 2,
-            (true, false) => manhattan(self.elf, self.start) + manhattan(self.start, self.goal),
-            (true, true) => manhattan(self.elf, self.goal),
+            (false, false) => manhattan(self.elf, map.goal) + manhattan(map.start, map.goal) * 2,
+            (true, false) => manhattan(self.elf, map.start) + manhattan(map.start, map.goal),
+            (true, true) => manhattan(self.elf, map.goal),
             _ => {
                 panic!("Oops");
             }
         }
     }
-    fn success2(&self) -> bool {
-        self.reached_goal && self.reached_start && self.elf == self.goal
+    fn success2(&self, map: &Map) -> bool {
+        self.reached_goal && self.reached_start && self.elf == map.goal
     }
 
-    fn print(&self, label: &str) {
+    fn _print(&self, map: &Map, label: &str) {
         println!("{}:", label);
-        for x in (self.x_min - 1)..=(self.x_max + 1) {
-            if self.elf == (x, self.y_min - 1) {
+        for x in (map.x_min - 1)..=(map.x_max + 1) {
+            if self.elf == (x, map.y_min - 1) {
                 print!("E");
-            } else if self.start.0 == x {
+            } else if map.start.0 == x {
                 print!(".");
             } else {
                 print!("#");
             }
         }
         println!();
-        for y in self.y_min..=self.y_max {
+        for y in map.y_min..=map.y_max {
             print!("#");
-            for x in self.x_min..=self.x_max {
+            for x in map.x_min..=map.x_max {
                 if self.elf == (x, y) {
                     print!("E");
                     continue;
                 }
-
-                let mut tile = Vec::new();
-                if self.up.contains(&(x, y)) {
-                    tile.push('^');
-                }
-                if self.down.contains(&(x, y)) {
-                    tile.push('v');
-                }
-                if self.left.contains(&(x, y)) {
-                    tile.push('<');
-                }
-                if self.right.contains(&(x, y)) {
-                    tile.push('>');
-                }
-                match tile.len() {
-                    0 => {
-                        print!(".");
-                    }
-                    1 => {
-                        print!("{}", tile[0]);
-                    }
-                    _ => {
-                        print!("{}", tile.len());
-                    }
+                match map.tile(x, y, self.t) {
+                    Some(s) => print!("{}", s),
+                    None => print!("."),
                 }
             }
             print!("#");
             println!();
         }
-        for x in (self.x_min - 1)..=(self.x_max + 1) {
-            if self.elf == (x, self.y_max + 1) {
+        for x in (map.x_min - 1)..=(map.x_max + 1) {
+            if self.elf == (x, map.y_max + 1) {
                 print!("E");
-            } else if self.goal.0 == x {
+            } else if map.goal.0 == x {
                 print!(".");
             } else {
                 print!("#");
@@ -367,30 +319,70 @@ impl State {
     }
 }
 
-fn manhattan(start: (usize, usize), goal: (usize, usize)) -> usize {
-    start.0.abs_diff(goal.0) + start.1.abs_diff(goal.1)
+fn _print_example(map: &Map) -> Option<()> {
+    let mut state = State::start_state(map);
+    state.print(map, "Initial state");
+    state = state.updated_blizzards().moved_down(map)?;
+    state.print(map, "Minute 1, move down");
+    state = state.updated_blizzards().moved_down(map)?;
+    state.print(map, "Minute 2, move down");
+    state = state.updated_blizzards().wait(map)?;
+    state.print(map, "Minute 3, wait");
+    state = state.updated_blizzards().moved_up(map)?;
+    state.print(map, "Minute 4, move up");
+    state = state.updated_blizzards().moved_right(map)?;
+    state.print(map, "Minute 5, move right");
+    state = state.updated_blizzards().moved_right(map)?;
+    state.print(map, "Minute 6, move right");
+    state = state.updated_blizzards().moved_down(map)?;
+    state.print(map, "Minute 7, move down");
+    state = state.updated_blizzards().moved_left(map)?;
+    state.print(map, "Minute 8, move left");
+    state = state.updated_blizzards().moved_up(map)?;
+    state.print(map, "Minute 9, move up");
+    state = state.updated_blizzards().moved_right(map)?;
+    state.print(map, "Minute 10, move right");
+    state = state.updated_blizzards().wait(map)?;
+    state.print(map, "Minute 11, wait");
+    state = state.updated_blizzards().moved_down(map)?;
+    state.print(map, "Minute 12, move down");
+    state = state.updated_blizzards().moved_down(map)?;
+    state.print(map, "Minute 13, move down");
+    state = state.updated_blizzards().moved_right(map)?;
+    state.print(map, "Minute 14, move right");
+    state = state.updated_blizzards().moved_right(map)?;
+    state.print(map, "Minute 15, move right");
+    state = state.updated_blizzards().moved_right(map)?;
+    state.print(map, "Minute 16, move right");
+    state = state.updated_blizzards().moved_down(map)?;
+    state.print(map, "Minute 17, move down");
+    state = state.updated_blizzards().moved_down(map)?;
+    state.print(map, "Minute 18, move down");
+    Some(())
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let start = State::from_str(input)?;
+    let map = Map::from_str(input)?;
+    let start = State::start_state(&map);
 
     let (_, cost) = astar(
         &start,
-        |s| s.neighbors(),
-        |s| s.heuristic(),
-        |s| s.success(),
+        |s| s.neighbors(&map),
+        |s| s.heuristic(&map),
+        |s| s.success(&map),
     )
     .unwrap();
     Ok(cost)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let start = State::from_str(input)?;
+    let map = Map::from_str(input)?;
+    let start = State::start_state(&map);
     let (_, cost) = astar(
         &start,
-        |s| s.neighbors(),
-        |s| s.heuristic2(),
-        |s| s.success2(),
+        |s| s.neighbors(&map),
+        |s| s.heuristic2(&map),
+        |s| s.success2(&map),
     )
     .unwrap();
     Ok(cost)
@@ -426,5 +418,21 @@ mod tests {
     #[test]
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
+    }
+
+    #[test]
+    fn wrapping_add_works() {
+        assert_eq!(wrapping_add(6, 1, 1, 6), 1);
+        assert_eq!(wrapping_add(1, 1, 1, 6), 2);
+        assert_eq!(wrapping_add(6, 6, 1, 6), 6);
+        assert_eq!(wrapping_add(1, 6, 1, 6), 1);
+    }
+
+    #[test]
+    fn wrapping_sub_works() {
+        assert_eq!(wrapping_sub(6, 1, 1, 6), 5);
+        assert_eq!(wrapping_sub(1, 1, 1, 6), 6);
+        assert_eq!(wrapping_sub(6, 6, 1, 6), 6);
+        assert_eq!(wrapping_sub(1, 6, 1, 6), 1);
     }
 }
