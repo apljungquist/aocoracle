@@ -146,7 +146,8 @@ impl FromStr for State {
 
 impl State {
     fn is_available(&self, x: usize, y: usize) -> bool {
-        (self.goal.0 == x && self.goal.1 == y)
+        (self.start.0 == x && self.start.1 == y)
+            || (self.goal.0 == x && self.goal.1 == y)
             || (self.x_min <= x
                 && x <= self.x_max
                 && self.y_min <= y
@@ -381,7 +382,6 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
     // state.print("Minute 17, move down");
     // state = state.updated_blizzards().moved_down().unwrap();
     // state.print("Minute 18, move down");
-
     let (path, cost) = astar(
         &start,
         |s| s.neighbors(),
@@ -389,9 +389,9 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
         |s| s.success(),
     )
     .unwrap();
-    for (i, state) in path.iter().enumerate() {
-        state.print(&format!("Minute {i}"))
-    }
+    // for (i, state) in path.iter().enumerate() {
+    //     state.print(&format!("Minute {i}"))
+    // }
     Ok(cost)
 }
 
