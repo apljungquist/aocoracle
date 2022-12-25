@@ -295,6 +295,50 @@ impl Pose {
             orientation: entering.2,
         }
     }
+    fn wrapped_2_input(&self, side: i32) -> Self {
+        let leaving = (
+            self.position.row / side,
+            self.position.col / side,
+            self.orientation.clone(),
+        );
+        let row = self.position.row % side;
+        let col = self.position.col % side;
+        let min = 0;
+        let max = side - 1;
+        let entering = match leaving {
+            // 1
+            (0, 1, N) => (3, 0, E, col, min),
+            (0, 1, W) => (2, 0, E, max - row, min),
+            // 2
+            (0, 2, N) => (3, 0, N, max, col),
+            (0, 2, E) => (2, 1, W, max - row, max),
+            (0, 2, S) => (1, 1, W, col, max),
+            // 3
+            (1, 1, E) => (0, 2, N, max, row),
+            (1, 1, W) => (2, 0, S, min, row),
+            // 4
+            (2, 0, N) => (1, 1, E, col, min),
+            (2, 0, W) => (0, 1, E, max - row, min),
+            // 5
+            (2, 1, E) => (0, 2, W, max - row, max),
+            (2, 1, S) => (3, 0, W, col, max),
+            // 6
+            (3, 0, E) => (2, 1, N, max, row),
+            (3, 0, S) => (0, 2, S, min, col),
+            (3, 0, W) => (0, 1, S, min, row),
+
+            _ => {
+                panic!("Oops {leaving:?} {self:?}");
+            }
+        };
+        Self {
+            position: Point {
+                row: entering.0 * side + entering.3,
+                col: entering.1 * side + entering.4,
+            },
+            orientation: entering.2,
+        }
+    }
 }
 
 fn score(row: i32, col: i32, heading: Heading) -> i32 {
@@ -333,13 +377,6 @@ fn initial_pose(map: &HashMap<Point, Tile>) -> Pose {
 // 19         .....#..
 // 10         .#......
 // 11         ......#.
-//  0,  8
-//  0, 10
-//  5, 10
-//  5,  3
-//  7,  3
-//  7,  7
-//  5,  7
 
 fn part_x(s: &str, is_part_2: bool) -> anyhow::Result<i32> {
     let map = map(s)?;
@@ -353,16 +390,17 @@ fn part_x(s: &str, is_part_2: bool) -> anyhow::Result<i32> {
     let steps = steps(s)?;
     let mut pose = initial_pose(&map);
     // dbg!(("initial", &position, &rotation));
-    println!("initial {pose:?}");
-    for (i, step) in steps.into_iter().enumerate() {
+    // println!("initial {pose:?}");
+    for (_, step) in steps.into_iter().enumerate() {
         pose = match (is_part_2, side) {
             (false, 4) => pose.updated(&step, &map, &|p| p.wrapped_1_example(side)),
             (true, 4) => pose.updated(&step, &map, &|p| p.wrapped_2_example(side)),
+            (true, 50) => pose.updated(&step, &map, &|p| p.wrapped_2_input(side)),
             _ => {
                 bail!("Not implemented")
             }
         };
-        println!("{i} {step:?} {pose:?}");
+        // println!("{i} {step:?} {pose:?}");
     }
 
     Ok(score(
@@ -378,6 +416,8 @@ pub fn part_1(input: &str) -> anyhow::Result<i32> {
 
 pub fn part_2(input: &str) -> anyhow::Result<i32> {
     part_x(input, true)
+    //  47230 < answer
+    // 184106
 }
 
 #[cfg(test)]
