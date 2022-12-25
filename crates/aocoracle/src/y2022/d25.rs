@@ -1,67 +1,81 @@
-// 2
-// 1
-// 0
-// -1 (-)
-// -2 (=)
+use anyhow::{anyhow, bail};
 
-use pathfinding::num_traits::Pow;
-use pathfinding::prelude::{astar, dijkstra};
-
-fn from_snafu(s: &str) -> i64 {
-    let mut result = 0;
-    for (i, ch) in s.chars().rev().enumerate() {
-        result += 5_i64.pow(i as u32)
-            * match ch {
-            '2' => 2,
-            '1' => 1,
-            '0' => 0,
-            '-' => -1,
-            '=' => -2,
-            _ => panic!("Oops"),
-        };
-    }
-    result
+fn checked_pow_mul_add(base: i64, exp: u32, mul_by: i64, add_to: i64) -> Option<i64> {
+    base.checked_pow(exp)?
+        .checked_mul(mul_by)?
+        .checked_add(add_to)
 }
 
-fn to_snafu(mut x: i64) -> String {
-    let mut exp_max = 0;
-    while x / (5_i64.pow(exp_max)) != 0 {
-        exp_max += 1;
+trait Snafu: Sized {
+    type Err;
+
+    fn from_snafu(s: &str) -> Result<Self, Self::Err>;
+    fn to_snafu(&self) -> String;
+}
+
+impl Snafu for i64 {
+    type Err = anyhow::Error;
+
+    fn from_snafu(s: &str) -> Result<Self, Self::Err> {
+        if s.starts_with('0') {
+            bail!("Expected snafu number without leading zeros but got {s}");
+        }
+        let mut result = 0;
+        for (i, ch) in s.chars().rev().enumerate() {
+            result = checked_pow_mul_add(
+                5,
+                i as u32,
+                match ch {
+                    '2' => 2,
+                    '1' => 1,
+                    '0' => 0,
+                    '-' => -1,
+                    '=' => -2,
+                    _ => bail!("Expected one of '2', '1', '0'', '-', or '=' but got {ch}"),
+                },
+                result,
+            )
+            .ok_or_else(|| anyhow!("Overflow"))?;
+        }
+        Ok(result)
     }
 
-    let mut result = String::new();
-    for i in (0..exp_max).rev() {
-        let d = 5_i64.pow(i);
-        let max:i64 = (0..i).map(|j| 2 * 5_i64.pow(j)).sum();
-        let c = if -max <= x && x <= max {
-            '0'
-        } else if 0<x {
-            assert!(max < x);
-            match (x - max)/d{
-                0=>{x -= d;'1'},
-                1=>{x -= 2*d;'2'},
-                _=>panic!("Oops")
-            }
-        } else {
-            assert!(x < -max);
-            match (x + max)/d{
-                0=>{x += d;'-'},
-                -1=>{x += 2*d;'='},
-                _=>panic!("Oops")
-            }
-        };
-        result.push(c);
+    fn to_snafu(&self) -> String {
+        let mut rem = *self;
+        let mut result = Vec::new();
+        while rem != 0 {
+            result.push(match rem % 5 {
+                0 => '0',
+                1 => '1',
+                2 => '2',
+                3 => {
+                    rem += 2;
+                    '='
+                }
+                4 => {
+                    rem += 1;
+                    '-'
+                }
+                _ => unreachable!(),
+            });
+            rem /= 5;
+        }
+        result.reverse();
+        result.iter().collect()
     }
-    result
+}
+
+fn fuel_requirements(s: &str) -> anyhow::Result<Vec<i64>> {
+    let mut result = Vec::new();
+    for line in s.lines() {
+        result.push(i64::from_snafu(line)?);
+    }
+    Ok(result)
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<String> {
-    let mut sum = 0;
-    for line in input.lines() {
-        let x = from_snafu(line);
-        sum += x;
-    }
-    Ok(to_snafu(sum))
+    let fuel_requirements = fuel_requirements(input)?;
+    Ok(fuel_requirements.iter().sum::<i64>().to_snafu())
 }
 
 #[cfg(test)]
@@ -83,6 +97,13 @@ mod tests {
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_error_on_wrong_input!(part_1, part_2);
+        assert_error_on_wrong_input!(part_1);
+    }
+
+    #[test]
+    fn snafu_conversion() {
+        for expected in [1, 2, 3, 4, 5, 6, 7, 8, 9, 34061028947237] {
+            assert_eq!(i64::from_snafu(&expected.to_snafu()).unwrap(), expected);
+        }
     }
 }
