@@ -1,9 +1,7 @@
-use crate::y2022::d22::Step::Move;
 use anyhow::bail;
 use hashbrown::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Add, Sub};
-use std::str::FromStr;
 
 #[derive(Clone, Eq, Hash, PartialEq)]
 struct Point {
@@ -54,8 +52,8 @@ fn map(s: &str) -> anyhow::Result<HashMap<Point, Tile>> {
                 '.' => {
                     result.insert(
                         Point {
-                            row: row as i32 + 1,
-                            col: col as i32 + 1,
+                            row: row as i32,
+                            col: col as i32,
                         },
                         Tile::Open,
                     );
@@ -63,8 +61,8 @@ fn map(s: &str) -> anyhow::Result<HashMap<Point, Tile>> {
                 '#' => {
                     result.insert(
                         Point {
-                            row: row as i32 + 1,
-                            col: col as i32 + 1,
+                            row: row as i32,
+                            col: col as i32,
                         },
                         Tile::Blocked,
                     );
@@ -113,59 +111,175 @@ fn steps(s: &str) -> anyhow::Result<Vec<Step>> {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 enum Heading {
-    Up,
-    Right,
-    Down,
-    Left,
+    N,
+    E,
+    S,
+    W,
 }
+
+use Heading::*;
 
 impl Heading {
     fn score(&self) -> i32 {
         match self {
-            Self::Right => 0,
-            Self::Down => 1,
-            Self::Left => 2,
-            Self::Up => 3,
+            Self::E => 0,
+            Self::S => 1,
+            Self::W => 2,
+            Self::N => 3,
         }
     }
     fn from_score(score: i32) -> Self {
         match score {
-            0 => Self::Right,
-            1 => Self::Down,
-            2 => Self::Left,
-            3 => Self::Up,
+            0 => Self::E,
+            1 => Self::S,
+            2 => Self::W,
+            3 => Self::N,
             _ => {
                 panic!("Oops");
             }
         }
     }
-    fn rotated_left(&self) -> Self {
-        Self::from_score((self.score() + 3) % 4)
+
+    fn rotated(&self, direction: &Direction) -> Self {
+        match direction {
+            Direction::Left => Self::from_score((self.score() + 3) % 4),
+            Direction::Right => Self::from_score((self.score() + 1) % 4),
+        }
     }
-    fn rotated_right(&self) -> Self {
-        Self::from_score((self.score() + 1) % 4)
-    }
+
     fn point(&self) -> Point {
         match self {
-            Self::Up => Point { row: -1, col: 0 },
-            Self::Right => Point { row: 0, col: 1 },
-            Self::Down => Point { row: 1, col: 0 },
-            Self::Left => Point { row: 0, col: -1 },
+            Self::N => Point { row: -1, col: 0 },
+            Self::E => Point { row: 0, col: 1 },
+            Self::S => Point { row: 1, col: 0 },
+            Self::W => Point { row: 0, col: -1 },
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct Pose {
+    position: Point,
+    orientation: Heading,
+}
+
+impl Pose {
+    fn updated<F>(&self, step: &Step, map: &HashMap<Point, Tile>, wrap: &F) -> Self
+    where
+        F: Fn(&Self) -> Self,
+    {
+        match step {
+            Step::Move(d) => {
+                let mut confirmed = self.clone();
+                for _ in 0..*d {
+                    if let Some(candidate) = confirmed.moved(map, wrap) {
+                        confirmed = candidate;
+                    } else {
+                        return confirmed;
+                    }
+                }
+                confirmed
+            }
+            Step::Rotate(d) => self.rotated(d),
+        }
+    }
+
+    fn moved<F>(&self, map: &HashMap<Point, Tile>, wrap: F) -> Option<Self>
+    where
+        F: Fn(&Self) -> Self,
+    {
+        let mut result = self.clone();
+        println!("Before {result:?}");
+        result.position = &result.position + &result.orientation.point();
+        println!(" After {result:?}");
+        if !map.contains_key(&result.position) {
+            println!("Leaving {self:?}");
+            result = wrap(self);
+            println!("Entering {result:?}");
+        }
+        match map.get(&result.position).unwrap() {
+            Tile::Open => {
+                println!("{:?} is open, updating position", &result.position);
+                Some(result)
+            }
+            Tile::Blocked => {
+                println!(
+                    "{:?} is blocked, returning {:?}",
+                    &result.position, &self.position
+                );
+                None
+            }
+        }
+    }
+
+    fn rotated(&self, direction: &Direction) -> Self {
+        Self {
+            position: self.position.clone(),
+            orientation: self.orientation.rotated(direction),
+        }
+    }
+
+    fn wrapped_1_example(&self, side: i32) -> Self {
+        let leaving = (
+            self.position.row / side,
+            self.position.col / side,
+            self.orientation.clone(),
+        );
+        let entering = match leaving {
+            // 1
+            (0, 2, N) => (2, 2, N),
+            (0, 2, E) => (0, 2, E),
+            (0, 2, W) => (0, 2, W),
+            // 2
+            (1, 0, N) => (1, 0, N),
+            (1, 0, S) => (1, 0, S),
+            (1, 0, E) => (1, 2, E),
+            // 3
+            (1, 1, N) => (1, 1, N),
+            (1, 1, S) => (1, 1, S),
+            // 4
+            (1, 2, E) => (1, 0, E),
+            // 5
+            (2, 2, S) => (0, 2, S),
+            (2, 2, W) => (2, 3, W),
+            //
+            (2, 3, N) => (2, 3, N),
+            (2, 3, E) => (2, 2, E),
+            (2, 3, S) => (2, 3, S),
+            _ => {
+                panic!("Oops {leaving:?} {self:?}");
+            }
+        };
+        let (rel_row, rel_col) = match self.orientation {
+            N => (side, self.position.col % side),
+            S => (0, self.position.col % side),
+            E => (self.position.row % side, 0),
+            W => (self.position.row % side, side),
+        };
+        Self {
+            position: Point {
+                row: entering.0 * side + rel_row,
+                col: entering.1 * side + rel_col,
+            },
+            orientation: entering.2,
         }
     }
 }
 
 fn score(row: i32, col: i32, heading: Heading) -> i32 {
-    1000 * row + 4 * col + heading.score()
+    1000 * (row + 1) + 4 * (col + 1) + heading.score()
 }
 
-fn initial_position(map: &HashMap<Point, Tile>) -> Point {
-    for col in 1.. {
-        let p = Point { row: 1, col: col };
+fn initial_pose(map: &HashMap<Point, Tile>) -> Pose {
+    for col in 0.. {
+        let p = Point { row: 0, col: col };
         if let Some(tile) = map.get(&p) {
             match tile {
                 Tile::Open => {
-                    return p;
+                    return Pose {
+                        position: p,
+                        orientation: Heading::E,
+                    };
                 }
                 Tile::Blocked => {}
             }
@@ -174,101 +288,67 @@ fn initial_position(map: &HashMap<Point, Tile>) -> Point {
     unreachable!()
 }
 
-fn updated_rotation(old: Heading, step: &Direction) -> Heading {
-    match step {
-        Direction::Left => old.rotated_left(),
-        Direction::Right => old.rotated_right(),
-    }
-}
+//              111
+//    0123456789012
+// 00         >>v#
+// 01         .#v.
+// 02         #.v.
+// 03         ..v.
+// 04 ...#...v..v#
+// 05 >>>v...>#.>>
+// 06 ..#v...#....
+// 07 ...>>>>v..#.
+// 08         ...#....
+// 19         .....#..
+// 10         .#......
+// 11         ......#.
+//  0,  8
+//  0, 10
+//  5, 10
+//  5,  3
+//  7,  3
+//  7,  7
+//  5,  7
 
-fn updated_position(
-    map: &HashMap<Point, Tile>,
-    mut old: Point,
-    rotation: &Heading,
-    distance: i32,
-) -> Point {
-    let mut new = old.clone();
-    let delta = rotation.point();
-    for _ in 0..distance {
-        new = &old + &delta;
-        if let Some(tile) = map.get(&new) {
-            match tile {
-                Tile::Open => {
-                    // println!("{:?} is open, updating position", &new);
-                    old = new;
-                }
-                Tile::Blocked => {
-                    // println!("{:?} is blocked, returning {:?}", &new, &old);
-                    return old;
-                }
-            }
-        } else {
-            // println!("{:?} is missing, rewinding", &new);
-            new = old.clone();
-            while let Some(_) = map.get(&new) {
-                new = &new - &delta;
-            }
-            new = &new + &delta;
-            if let Some(tile) = map.get(&new) {
-                match tile {
-                    Tile::Open => {
-                        // println!("{:?} is open, updating position after rewind", &new);
-                        old = new;
-                    }
-                    Tile::Blocked => {
-                        // println!("{:?} is blocked, returning after rewind {:?}", &new, &old);
-                        return old;
-                    }
-                }
-            } else {
-                panic!("Should not happen")
-            }
+fn part_x(s: &str, is_part_2: bool) -> anyhow::Result<i32> {
+    let map = map(s)?;
+    let side = match map.len() {
+        96 => 4,
+        15000 => 50,
+        _ => {
+            bail!("Expected faces with side 4 or 50");
         }
-    }
-    // println!("Came to a stop, returning {:?}", &old);
-    old
-}
+    };
+    let steps = steps(s)?;
+    let mut pose = initial_pose(&map);
+    let wrap = match (is_part_2, side) {
+        (false, 4) => |p: &Pose| p.wrapped_1_example(side),
+        // (true, 4)=>|p| p.wrapped_2_example(side),
+        _ => {
+            bail!("Not implemented")
+        }
+    };
 
-//             111
-//    123456789012
-// 01         >>v#
-// 02         .#v.
-// 03         #.v.
-// 04         ..v.
-// 05 ...#...v..v#
-// 06 >>>v...>#.>>
-// 07 ..#v...#....
-// 08 ...>>>>v..#.
-// 09         ...#....
-// 10         .....#..
-// 11         .#......
-// 12         ......#.
+    // dbg!(("initial", &position, &rotation));
+    println!("initial {pose:?}");
+    for (i, step) in steps.into_iter().enumerate() {
+        pose = pose.updated(&step, &map, &wrap);
+        println!("{i} {step:?} {pose:?}");
+    }
+
+    Ok(score(
+        pose.position.row,
+        pose.position.col,
+        pose.orientation,
+    ))
+}
 
 pub fn part_1(input: &str) -> anyhow::Result<i32> {
-    let map = map(input)?;
-    let steps = steps(input)?;
-
-    let mut position = initial_position(&map);
-    let mut rotation = Heading::Right;
-
-    dbg!(&position, &rotation);
-    for (i, step) in steps.into_iter().enumerate() {
-        match &step {
-            Step::Move(distance) => {
-                position = updated_position(&map, position, &rotation, *distance);
-            }
-            Step::Rotate(direction) => {
-                rotation = updated_rotation(rotation, &direction);
-            }
-        }
-        // dbg!(i, &step, &position, &rotation);
-    }
-
-    Ok(score(position.row, position.col, rotation))
+    part_x(input, false)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<i128> {
-    Ok(0)
+pub fn part_2(input: &str) -> anyhow::Result<i32> {
+    part_x(input, true)
 }
 
 #[cfg(test)]
