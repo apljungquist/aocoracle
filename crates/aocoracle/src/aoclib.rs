@@ -1,9 +1,9 @@
-use anyhow::{anyhow, bail};
-
-use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+
+use anyhow::{anyhow, bail};
+use serde::Deserialize;
 use structopt::StructOpt;
 
 mod itersum;
@@ -101,101 +101,119 @@ where
     Box::new(move |s| func(s).map(|ok| ok.to_string()))
 }
 
+// TODO: It would be neat if solvers could be registered where they are implemented
 fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver>> {
     let mut functions: BTreeMap<_, Box<Solver>> = BTreeMap::new();
-    functions.insert((2018, 1, Part::One), boxed(&y2018::d01::part_1));
-    functions.insert((2018, 1, Part::Two), boxed(&y2018::d01::part_2));
-    functions.insert((2018, 2, Part::One), boxed(&y2018::d02::part_1));
-    functions.insert((2018, 2, Part::Two), boxed(&y2018::d02::part_2));
-    functions.insert((2018, 3, Part::One), boxed(&y2018::d03::part_1));
-    functions.insert((2018, 3, Part::Two), boxed(&y2018::d03::part_2));
-    functions.insert((2018, 4, Part::One), boxed2(&y2018::d04::part_1));
-    functions.insert((2018, 4, Part::Two), boxed2(&y2018::d04::part_2));
-    functions.insert((2018, 5, Part::One), boxed2(&y2018::d05::part_1));
-    functions.insert((2018, 5, Part::Two), boxed2(&y2018::d05::part_2));
-    functions.insert((2018, 6, Part::One), boxed2(&y2018::d06::part_1));
-    functions.insert((2018, 6, Part::Two), boxed2(&y2018::d06::part_2b));
-    functions.insert((2018, 7, Part::One), boxed2(&y2018::d07::part_1));
-    functions.insert((2018, 7, Part::Two), boxed2(&y2018::d07::part_2b));
-    functions.insert((2018, 8, Part::One), boxed2(&y2018::d08::part_1));
-    functions.insert((2018, 8, Part::Two), boxed2(&y2018::d08::part_2));
-    functions.insert((2020, 1, Part::One), boxed(&y2020::d01::part_1));
-    functions.insert((2020, 1, Part::Two), boxed(&y2020::d01::part_2));
-    functions.insert((2020, 2, Part::One), boxed(&y2020::d02::part_1));
-    functions.insert((2020, 2, Part::Two), boxed(&y2020::d02::part_2));
-    functions.insert((2021, 1, Part::One), boxed(&y2021::d01::part_1));
-    functions.insert((2021, 1, Part::Two), boxed(&y2021::d01::part_2));
-    functions.insert((2021, 2, Part::One), boxed(&y2021::d02::part_1));
-    functions.insert((2021, 2, Part::Two), boxed(&y2021::d02::part_2));
-    functions.insert((2021, 3, Part::One), boxed(&y2021::d03::part_1));
-    functions.insert((2021, 3, Part::Two), boxed(&y2021::d03::part_2));
-    functions.insert((2021, 4, Part::One), boxed(&y2021::d04::part_1));
-    functions.insert((2021, 4, Part::Two), boxed(&y2021::d04::part_2));
-    functions.insert((2021, 5, Part::One), boxed(&y2021::d05::part_1));
-    functions.insert((2021, 5, Part::Two), boxed(&y2021::d05::part_2));
-    functions.insert((2021, 6, Part::One), boxed(&y2021::d06::part_1));
-    functions.insert((2021, 6, Part::Two), boxed(&y2021::d06::part_2));
-    functions.insert((2021, 7, Part::One), boxed(&y2021::d07::part_1));
-    functions.insert((2021, 7, Part::Two), boxed(&y2021::d07::part_2));
-    functions.insert((2021, 8, Part::One), boxed(&y2021::d08::part_1));
-    functions.insert((2021, 8, Part::Two), boxed(&y2021::d08::part_2));
-    functions.insert((2021, 20, Part::One), boxed(&y2021::d20::part_1));
-    functions.insert((2021, 20, Part::Two), boxed(&y2021::d20::part_2));
-    functions.insert((2021, 21, Part::One), boxed(&y2021::d21::part_1));
-    functions.insert((2021, 21, Part::Two), boxed(&y2021::d21::part_2));
-    functions.insert((2021, 22, Part::One), boxed(&y2021::d22::part_1));
-    functions.insert((2021, 22, Part::Two), boxed(&y2021::d22::part_2));
-    functions.insert((2021, 23, Part::One), boxed(&y2021::d23::part_1));
-    functions.insert((2021, 23, Part::Two), boxed(&y2021::d23::part_2));
-    functions.insert((2021, 24, Part::One), boxed(&y2021::d24::part_1));
-    functions.insert((2021, 24, Part::Two), boxed(&y2021::d24::part_2));
-    functions.insert((2021, 25, Part::One), boxed(&y2021::d25::part_1));
-    functions.insert((2022, 1, Part::One), boxed2(&y2022::d01::part_1));
-    functions.insert((2022, 1, Part::Two), boxed2(&y2022::d01::part_2));
-    functions.insert((2022, 2, Part::One), boxed2(&y2022::d02::part_1));
-    functions.insert((2022, 2, Part::Two), boxed2(&y2022::d02::part_2));
-    functions.insert((2022, 3, Part::One), boxed2(&y2022::d03::part_1));
-    functions.insert((2022, 3, Part::Two), boxed2(&y2022::d03::part_2));
-    functions.insert((2022, 4, Part::One), boxed2(&y2022::d04::part_1));
-    functions.insert((2022, 4, Part::Two), boxed2(&y2022::d04::part_2));
-    functions.insert((2022, 5, Part::One), boxed2(&y2022::d05::part_1));
-    functions.insert((2022, 5, Part::Two), boxed2(&y2022::d05::part_2));
-    functions.insert((2022, 6, Part::One), boxed2(&y2022::d06::part_1));
-    functions.insert((2022, 6, Part::Two), boxed2(&y2022::d06::part_2));
-    functions.insert((2022, 7, Part::One), boxed2(&y2022::d07::part_1));
-    functions.insert((2022, 7, Part::Two), boxed2(&y2022::d07::part_2));
-    functions.insert((2022, 8, Part::One), boxed2(&y2022::d08::part_1));
-    functions.insert((2022, 8, Part::Two), boxed2(&y2022::d08::part_2));
-    functions.insert((2022, 9, Part::One), boxed2(&y2022::d09::part_1));
-    functions.insert((2022, 9, Part::Two), boxed2(&y2022::d09::part_2));
-    functions.insert((2022, 10, Part::One), boxed2(&y2022::d10::part_1));
-    functions.insert((2022, 10, Part::Two), boxed2(&y2022::d10::part_2));
-    functions.insert((2022, 11, Part::One), boxed2(&y2022::d11::part_1));
-    functions.insert((2022, 11, Part::Two), boxed2(&y2022::d11::part_2));
-    functions.insert((2022, 12, Part::One), boxed2(&y2022::d12::part_1));
-    functions.insert((2022, 12, Part::Two), boxed2(&y2022::d12::part_2));
-    functions.insert((2022, 13, Part::One), boxed2(&y2022::d13::part_1));
-    functions.insert((2022, 13, Part::Two), boxed2(&y2022::d13::part_2));
-    functions.insert((2022, 14, Part::One), boxed2(&y2022::d14::part_1));
-    functions.insert((2022, 14, Part::Two), boxed2(&y2022::d14::part_2));
-    functions.insert((2022, 15, Part::One), boxed2(&y2022::d15::part_1b));
-    functions.insert((2022, 15, Part::Two), boxed2(&y2022::d15::part_2b));
-    functions.insert((2022, 17, Part::One), boxed2(&y2022::d17::part_1));
-    functions.insert((2022, 17, Part::Two), boxed2(&y2022::d17::part_2));
-    functions.insert((2022, 18, Part::One), boxed2(&y2022::d18::part_1));
-    functions.insert((2022, 18, Part::Two), boxed2(&y2022::d18::part_2));
-    functions.insert((2022, 20, Part::One), boxed2(&y2022::d20::part_1));
-    functions.insert((2022, 20, Part::Two), boxed2(&y2022::d20::part_2));
-    functions.insert((2022, 21, Part::One), boxed2(&y2022::d21::part_1));
-    functions.insert((2022, 21, Part::Two), boxed2(&y2022::d21::part_2));
-    functions.insert((2022, 23, Part::One), boxed2(&y2022::d23::part_1));
-    functions.insert((2022, 23, Part::Two), boxed2(&y2022::d23::part_2));
-    functions.insert((2022, 24, Part::One), boxed2(&y2022::d24::part_1));
-    functions.insert((2022, 24, Part::Two), boxed2(&y2022::d24::part_2));
-    functions.insert((2022, 25, Part::One), boxed2(&y2022::d25::part_1));
+
+    macro_rules! register_solver_old {
+        ($y:literal, $d:literal, $p:expr => $f:expr) => {
+            assert!(functions.insert(($y, $d, $p), boxed($f)).is_none());
+        };
+    }
+
+    macro_rules! register_solver_new {
+        ($y:literal, $d:literal, $p:expr => $f:expr) => {
+            assert!(functions.insert(($y, $d, $p), boxed2($f)).is_none());
+        };
+    }
+
+    // 2018
+    register_solver_old!(2018, 1, Part::One => &y2018::d01::part_1);
+    register_solver_old!(2018, 1, Part::Two => &y2018::d01::part_2);
+    register_solver_old!(2018, 2, Part::One => &y2018::d02::part_1);
+    register_solver_old!(2018, 2, Part::Two => &y2018::d02::part_2);
+    register_solver_old!(2018, 3, Part::One => &y2018::d03::part_1);
+    register_solver_old!(2018, 3, Part::Two => &y2018::d03::part_2);
+    register_solver_new!(2018, 4, Part::One => &y2018::d04::part_1);
+    register_solver_new!(2018, 4, Part::Two => &y2018::d04::part_2);
+    register_solver_new!(2018, 5, Part::One => &y2018::d05::part_1);
+    register_solver_new!(2018, 5, Part::Two => &y2018::d05::part_2);
+    register_solver_new!(2018, 6, Part::One => &y2018::d06::part_1);
+    register_solver_new!(2018, 6, Part::Two => &y2018::d06::part_2b);
+    register_solver_new!(2018, 7, Part::One => &y2018::d07::part_1);
+    register_solver_new!(2018, 7, Part::Two => &y2018::d07::part_2b);
+    register_solver_new!(2018, 8, Part::One => &y2018::d08::part_1);
+    register_solver_new!(2018, 8, Part::Two => &y2018::d08::part_2);
+    // 2020
+    register_solver_old!(2020, 1, Part::One => &y2020::d01::part_1);
+    register_solver_old!(2020, 1, Part::Two => &y2020::d01::part_2);
+    register_solver_old!(2020, 2, Part::One => &y2020::d02::part_1);
+    register_solver_old!(2020, 2, Part::Two => &y2020::d02::part_2);
+    // 2021
+    register_solver_old!(2021, 1, Part::One => &y2021::d01::part_1);
+    register_solver_old!(2021, 1, Part::Two => &y2021::d01::part_2);
+    register_solver_old!(2021, 2, Part::One => &y2021::d02::part_1);
+    register_solver_old!(2021, 2, Part::Two => &y2021::d02::part_2);
+    register_solver_old!(2021, 3, Part::One => &y2021::d03::part_1);
+    register_solver_old!(2021, 3, Part::Two => &y2021::d03::part_2);
+    register_solver_old!(2021, 4, Part::One => &y2021::d04::part_1);
+    register_solver_old!(2021, 4, Part::Two => &y2021::d04::part_2);
+    register_solver_old!(2021, 5, Part::One => &y2021::d05::part_1);
+    register_solver_old!(2021, 5, Part::Two => &y2021::d05::part_2);
+    register_solver_old!(2021, 6, Part::One => &y2021::d06::part_1);
+    register_solver_old!(2021, 6, Part::Two => &y2021::d06::part_2);
+    register_solver_old!(2021, 7, Part::One => &y2021::d07::part_1);
+    register_solver_old!(2021, 7, Part::Two => &y2021::d07::part_2);
+    register_solver_old!(2021, 8, Part::One => &y2021::d08::part_1);
+    register_solver_old!(2021, 8, Part::Two => &y2021::d08::part_2);
+    register_solver_old!(2021, 20, Part::One => &y2021::d20::part_1);
+    register_solver_old!(2021, 20, Part::Two => &y2021::d20::part_2);
+    register_solver_old!(2021, 21, Part::One => &y2021::d21::part_1);
+    register_solver_old!(2021, 21, Part::Two => &y2021::d21::part_2);
+    register_solver_old!(2021, 22, Part::One => &y2021::d22::part_1);
+    register_solver_old!(2021, 22, Part::Two => &y2021::d22::part_2);
+    register_solver_old!(2021, 23, Part::One => &y2021::d23::part_1);
+    register_solver_old!(2021, 23, Part::Two => &y2021::d23::part_2);
+    register_solver_old!(2021, 24, Part::One => &y2021::d24::part_1);
+    register_solver_old!(2021, 24, Part::Two => &y2021::d24::part_2);
+    register_solver_old!(2021, 25, Part::One => &y2021::d25::part_1);
+    // 2022
+    register_solver_new!(2022, 1, Part::One => &y2022::d01::part_1);
+    register_solver_new!(2022, 1, Part::Two => &y2022::d01::part_2);
+    register_solver_new!(2022, 2, Part::One => &y2022::d02::part_1);
+    register_solver_new!(2022, 2, Part::Two => &y2022::d02::part_2);
+    register_solver_new!(2022, 3, Part::One => &y2022::d03::part_1);
+    register_solver_new!(2022, 3, Part::Two => &y2022::d03::part_2);
+    register_solver_new!(2022, 4, Part::One => &y2022::d04::part_1);
+    register_solver_new!(2022, 4, Part::Two => &y2022::d04::part_2);
+    register_solver_new!(2022, 5, Part::One => &y2022::d05::part_1);
+    register_solver_new!(2022, 5, Part::Two => &y2022::d05::part_2);
+    register_solver_new!(2022, 6, Part::One => &y2022::d06::part_1);
+    register_solver_new!(2022, 6, Part::Two => &y2022::d06::part_2);
+    register_solver_new!(2022, 7, Part::One => &y2022::d07::part_1);
+    register_solver_new!(2022, 7, Part::Two => &y2022::d07::part_2);
+    register_solver_new!(2022, 8, Part::One => &y2022::d08::part_1);
+    register_solver_new!(2022, 8, Part::Two => &y2022::d08::part_2);
+    register_solver_new!(2022, 9, Part::One => &y2022::d09::part_1);
+    register_solver_new!(2022, 9, Part::Two => &y2022::d09::part_2);
+    register_solver_new!(2022, 10, Part::One => &y2022::d10::part_1);
+    register_solver_new!(2022, 10, Part::Two => &y2022::d10::part_2);
+    register_solver_new!(2022, 11, Part::One => &y2022::d11::part_1);
+    register_solver_new!(2022, 11, Part::Two => &y2022::d11::part_2);
+    register_solver_new!(2022, 12, Part::One => &y2022::d12::part_1);
+    register_solver_new!(2022, 12, Part::Two => &y2022::d12::part_2);
+    register_solver_new!(2022, 13, Part::One => &y2022::d13::part_1);
+    register_solver_new!(2022, 13, Part::Two => &y2022::d13::part_2);
+    register_solver_new!(2022, 14, Part::One => &y2022::d14::part_1);
+    register_solver_new!(2022, 14, Part::Two => &y2022::d14::part_2);
+    register_solver_new!(2022, 15, Part::One => &y2022::d15::part_1b);
+    register_solver_new!(2022, 15, Part::Two => &y2022::d15::part_2b);
+    register_solver_new!(2022, 17, Part::One => &y2022::d17::part_1);
+    register_solver_new!(2022, 17, Part::Two => &y2022::d17::part_2);
+    register_solver_new!(2022, 18, Part::One => &y2022::d18::part_1);
+    register_solver_new!(2022, 18, Part::Two => &y2022::d18::part_2);
+    register_solver_new!(2022, 20, Part::One => &y2022::d20::part_1);
+    register_solver_new!(2022, 20, Part::Two => &y2022::d20::part_2);
+    register_solver_new!(2022, 21, Part::One => &y2022::d21::part_1);
+    register_solver_new!(2022, 21, Part::Two => &y2022::d21::part_2);
+    register_solver_new!(2022, 23, Part::One => &y2022::d23::part_1);
+    register_solver_new!(2022, 23, Part::Two => &y2022::d23::part_2);
+    register_solver_new!(2022, 24, Part::One => &y2022::d24::part_1);
+    register_solver_new!(2022, 24, Part::Two => &y2022::d24::part_2);
+    register_solver_new!(2022, 25, Part::One => &y2022::d25::part_1);
     // 2023
-    functions.insert((2023, 1, Part::One), boxed2(&y2023::d01::part_1));
-    functions.insert((2023, 1, Part::Two), boxed2(&y2023::d01::part_2));
+    register_solver_new!(2023, 1, Part::One => &y2023::d01::part_1);
+    register_solver_new!(2023, 1, Part::Two => &y2023::d01::part_2);
     functions
 }
 
