@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import datetime
 import functools
 import hashlib
 import itertools
@@ -118,6 +119,29 @@ class Session:
             self._answers[key] = self._answer(year, day, part)
         return self._answers[key]
 
+    def set_default_answers(self, year: int, day: int) -> None:
+        for part in [1, 2]:
+            keys = [
+                f"{year:04}/{day:02}/{part}/{self.user_fingerprint()}",
+                f"{year:04}/{day:02}/{part}/example",
+            ]
+            for key in keys:
+                if key not in self._answers:
+                    logger.debug("Creating default answer %s", key)
+                    self._answers.setdefault(key, "")
+
+    def set_default_example(self, year: int, day: int) -> None:
+        file_location = (
+            self._cache_location
+            / "inputs"
+            / f"{year:04}"
+            / f"{day:02}"
+            / f"example.txt"
+        )
+        if not file_location.exists():
+            logger.debug("Creating default input %s", file_location)
+            file_location.touch()
+
 
 def _scrape_answers(session: Session) -> None:
     logger.info(f"Scraping {session.user_fingerprint()} for answers")
@@ -144,6 +168,13 @@ def _scrape_inputs(session: Session) -> None:
             except requests.HTTPError:
                 logger.info("Could not retrieve input for %s/%s", year, day)
                 return
+
+
+def _scrape_today(session: Session) -> None:
+    now = datetime.datetime.now()
+    session.input(year=now.year, day=now.day)
+    session.set_default_answers(year=now.year, day=now.day)
+    session.set_default_example(year=now.year, day=now.day)
 
 
 SAVED_COOKIES_PATH = pathlib.Path(__file__).with_suffix(".sessions.json")
@@ -182,6 +213,12 @@ class CLI:
         for fingerprint, cookie in _read_cookies().items():
             with Session(session=cookie, user_fingerprint=fingerprint) as session:
                 _scrape_inputs(session)
+
+    @staticmethod
+    def today() -> None:
+        for fingerprint, cookie in _read_cookies().items():
+            with Session(session=cookie, user_fingerprint=fingerprint) as session:
+                _scrape_today(session)
 
 
 if __name__ == "__main__":
