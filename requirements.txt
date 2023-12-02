@@ -2,7 +2,9 @@ black
 isort
 fire
 mkhelp
+mypy
 pip
 requests
+ruff
 setuptools
 sprig
