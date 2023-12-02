@@ -214,6 +214,8 @@ fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver>> {
     // 2023
     register_solver_new!(2023, 1, Part::One => &y2023::d01::part_1);
     register_solver_new!(2023, 1, Part::Two => &y2023::d01::part_2);
+    register_solver_new!(2023, 2, Part::One => &y2023::d02::part_1);
+    register_solver_new!(2023, 2, Part::Two => &y2023::d02::part_2);
     functions
 }
 
@@ -497,7 +499,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (209, 0, 186, 4, 0, 2, num_input * num_solver),
+            (213, 0, 186, 4, 0, 2, num_input * num_solver),
         );
         Ok(())
     }
