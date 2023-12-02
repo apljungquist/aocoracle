@@ -31,7 +31,29 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<u32> {
-    Ok(0)
+    let mut sum = 0;
+    for (i, line) in input.lines().enumerate(){
+        let (g, draws) = line.split_once(':').unwrap();
+        let mut min_r = 0;
+        let mut min_g = 0;
+        let mut min_b = 0;
+        for draw in draws.split(";") {
+            for pair in  draw.split(",") {
+                let pair = pair.trim();
+                let (n, c) = pair.split_once(' ').unwrap();
+                let n: u32 = n.trim().parse().unwrap();
+                match c.trim() {
+                    "red" => min_r = min_r.max(n),
+                    "green" => min_g = min_g.max(n),
+                    "blue" => min_b = min_b.max(n),
+                    _ => panic!("{}", c),
+                };
+            }
+        }
+        let power = min_r*min_g*min_b;
+        sum += power;
+    }
+    Ok(sum)
 }
 
 #[cfg(test)]
