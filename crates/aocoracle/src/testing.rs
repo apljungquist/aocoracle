@@ -1,11 +1,8 @@
 use crate::Part;
 use glob::glob;
 use std::any::type_name;
-use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::fs;
-
-type Answers = BTreeMap<u16, BTreeMap<u8, BTreeMap<Part, BTreeMap<String, String>>>>;
 
 fn year_day(file: &str) -> (u16, u8) {
     let re = regex::Regex::new(r"y(\d{4})/d(\d{2})").expect("Hard coded regex is valid");
@@ -17,7 +14,7 @@ fn year_day(file: &str) -> (u16, u8) {
 
 pub fn read_input(year: u16, day: u8, stem: &str) -> String {
     fs::read_to_string(format!(
-        "../../data/inputs/{:04}/{:02}/{}.txt",
+        "../../data/{:04}/{:02}/inputs/{}.txt",
         year, day, stem
     ))
     .unwrap()
@@ -25,12 +22,12 @@ pub fn read_input(year: u16, day: u8, stem: &str) -> String {
 
 pub fn available_inputs() -> Vec<(u16, u8, String)> {
     let mut result = Vec::new();
-    for entry in glob("../../data/inputs/*/*/*.txt").unwrap() {
+    for entry in glob("../../data/*/*/inputs/*.txt").unwrap() {
         let path = entry.unwrap();
         let stem = path.file_stem().unwrap().to_str().unwrap();
         let day = path
             .ancestors()
-            .nth(1)
+            .nth(2)
             .unwrap()
             .file_stem()
             .unwrap()
@@ -38,7 +35,7 @@ pub fn available_inputs() -> Vec<(u16, u8, String)> {
             .unwrap();
         let year = path
             .ancestors()
-            .nth(2)
+            .nth(3)
             .unwrap()
             .file_stem()
             .unwrap()
@@ -61,14 +58,11 @@ where
     func(&read_input(year, day, stem))
 }
 
-fn read_answers() -> Answers {
-    let text = &fs::read_to_string("../../data/answers.json").unwrap();
-    serde_json::from_str(text).unwrap()
-}
-
 pub fn expected_answer(year: u16, day: u8, part: Part, stem: &str) -> Option<String> {
-    let answers = read_answers();
-    Some(answers.get(&year)?.get(&day)?.get(&part)?.get(stem)?.into())
+    fs::read_to_string(format!(
+        "../../data/{year:04}/{day:02}/answers/{part:01}/{stem}.txt"
+    ))
+    .ok()
 }
 
 pub fn assert_correct_answer_on_correct_input_given_file<F, T, U>(
