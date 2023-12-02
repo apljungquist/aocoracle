@@ -376,7 +376,7 @@ mod tests {
     }
 
     #[test]
-    fn every_input_is_solved_by_exactly_one_solver() -> Result<(), AnyError> {
+    fn every_input_is_solved_by_exactly_one_solver() {
         let mut cols = BTreeMap::new();
         let mut num_correct = 0;
         let mut num_deletion = 0;
@@ -387,7 +387,7 @@ mod tests {
         let mut num_error = 0;
         let mut num_panic = 0;
         for (input_year, input_day, stem) in available_inputs() {
-            let input_key = || format!("{input_year}/{input_day:02}/{stem}");
+            let input_key = || format!("{input_year}/{input_day:02}/{stem:7}");
             let actual_answers = panic::catch_unwind(|| {
                 helper(
                     &Cli::new(None, None, None, true),
@@ -475,7 +475,7 @@ mod tests {
         dbg!(num_input);
         dbg!(num_solver);
         dbg!(num_pair);
-        println!("{}", as_ascii_table(&cols)?);
+        println!("{}", as_ascii_table(&cols).unwrap());
         println!(
             "word error rate: {}",
             (num_deletion + num_insertion + num_substitution) as f64
@@ -499,8 +499,7 @@ mod tests {
                 // Sanity check to see that every pair is counter once
                 num_pair,
             ),
-            (213, 0, 186, 4, 0, 2, num_input * num_solver),
+            (211, 0, 172, 4, 0, 2, num_input * num_solver),
         );
-        Ok(())
     }
 }

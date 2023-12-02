@@ -217,22 +217,22 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "example", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "6bb0c0bd67", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "4a92cc03c1028b0c", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2, "example", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "4a92cc03c1028b0c", Part::Two);
     }
 
     #[test]
@@ -241,12 +241,12 @@ mod tests {
     }
 
     #[test]
-    fn part_1_works_on_3ba7923eae() {
-        assert_correct_answer_on_correct_input!(part_1, "3ba7923eae", Part::One);
+    fn part_1_works_on_76ed0dd5ed2dc0c8() {
+        assert_correct_answer_on_correct_input!(part_1, "76ed0dd5ed2dc0c8", Part::One);
     }
 
     #[test]
-    fn part_2_works_on_3ba7923eae() {
-        assert_correct_answer_on_correct_input!(part_2, "3ba7923eae", Part::Two);
+    fn part_2_works_on_76ed0dd5ed2dc0c8() {
+        assert_correct_answer_on_correct_input!(part_2, "76ed0dd5ed2dc0c8", Part::Two);
     }
 }

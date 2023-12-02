@@ -34,7 +34,7 @@ impl FromStr for Input {
         }
 
         if ids.len() < 2 {
-            // Avoid FP for 2015/04/3ba7923eae
+            // Avoid FP for 2015/04/42d4e25bdd6b87ef
             return Err(format!(
                 "Problem requires at least 2 ids to be solved but got {}",
                 ids.len()
@@ -102,25 +102,25 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "example", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "3ba7923eae", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "42d4e25bdd6b87ef", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example2() {
-        assert_correct_answer_on_correct_input!(part_2, "example2", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE2", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "3ba7923eae", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "42d4e25bdd6b87ef", Part::Two);
     }
 
-    #[ignore] // Cannot think of a way to invalidate 2015/05/3ba7923eae
+    #[ignore] // Cannot think of a way to invalidate 2015-05 3bf6e8b73a096b90
     #[test]
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
