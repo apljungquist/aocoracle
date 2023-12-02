@@ -20,6 +20,14 @@ from typing_extensions import Self
 logger = logging.getLogger(__name__)
 
 
+def _pretty_answer_name(year: int, day: int, part: int) -> str:
+    return f"{year:04}:{day:02}:?:{part:01}"
+
+
+def _pretty_input_name(year: int, day: int) -> str:
+    return f"{year:04}:{day:02}"
+
+
 class AnswerNotFoundError(Exception):
     ...
 
@@ -130,15 +138,16 @@ class Session:
 
     def answer(self, year: int, day: int, part: int) -> str:
         cache_path = self._download(f"{year}/day/{day}", self.user_id(), ".html")
-        content = cache_path.read_text()
         stem = _hexdigest(self.input(year, day))
         data_path = self.answer_path(year, day, part, stem)
         if data_path.exists():
             logger.debug("Reusing answer %s", data_path)
+            content = data_path.read_text()
         else:
+            content = self.parsed_answer(cache_path.read_text(), part)
             logger.debug("Creating answer %s", data_path)
             data_path.parent.mkdir(parents=True, exist_ok=True)
-            data_path.write_text(self.parsed_answer(content, part))
+            data_path.write_text(content)
         return content
 
     @staticmethod
@@ -180,10 +189,13 @@ def _scrape_answers(session: Session) -> None:
                 try:
                     session.answer(year, day, part)
                 except AnswerNotFoundError:
-                    logger.debug("No answer for found %s/%s/%s", year, day, part)
+                    logger.debug(
+                        "No answer found for  %s", _pretty_answer_name(year, day, part)
+                    )
                 except requests.HTTPError:
                     logger.debug(
-                        "Could not retrieve question for %s/%s/%s", year, day, part
+                        "Could not retrieve question for %s",
+                        _pretty_answer_name(year, day, part),
                     )
                     return
 
@@ -195,7 +207,9 @@ def _scrape_inputs(session: Session) -> None:
             try:
                 session.input(year, day)
             except requests.HTTPError:
-                logger.info("Could not retrieve input for %s/%s", year, day)
+                logger.info(
+                    "Could not retrieve input for %s", _pretty_input_name(year, day)
+                )
                 return
 
 
