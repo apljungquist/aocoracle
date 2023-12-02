@@ -293,7 +293,7 @@ pub fn helper_text(args: &Cli, text: &str) -> anyhow::Result<Vec<String>> {
         false => structured.iter().map(|(_, v)| v.to_string()).collect(),
         true => structured
             .iter()
-            .map(|((y, d, p), v)| format!("y{}d{:02}p{}: {}", y, d, p, v))
+            .map(|((y, d, p), v)| format!("{y:04}:{d:02}::{p:01} = {v}"))
             .collect(),
     })
 }
@@ -387,7 +387,7 @@ mod tests {
         let mut num_error = 0;
         let mut num_panic = 0;
         for (input_year, input_day, stem) in available_inputs() {
-            let input_key = || format!("{input_year}/{input_day:02}/{stem:7}");
+            let input_key = || format!("{input_year:04}:{input_day:02}:{stem:7}");
             let actual_answers = panic::catch_unwind(|| {
                 helper(
                     &Cli::new(None, None, None, true),
@@ -407,7 +407,7 @@ mod tests {
             };
             // Assume that if it is not implemented it will not be among actual_answers
             for (solver_year, solver_day, part) in _available_solvers().into_keys() {
-                let solver_key = || format!("{solver_year}/{solver_day:02}::{part}");
+                let solver_key = || format!("{solver_year}:{solver_day:02}::{part}");
                 let correct_key = input_year == solver_year && input_day == solver_day;
                 let expected_answer = expected_answer(input_year, input_day, part, &stem);
                 let actual_answer = actual_answers.remove(&(solver_year, solver_day, part));
