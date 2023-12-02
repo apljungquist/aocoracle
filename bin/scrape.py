@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+from __future__ import annotations
+
+import dataclasses
 import datetime
 import functools
 import hashlib
@@ -39,11 +43,11 @@ def _hexdigest(text: str) -> str:
 class Session:
     def __init__(
         self,
-        session: str,
+        cookie: str,
         cache_location: pathlib.Path = pathlib.Path(__file__).parents[1] / "cache",
         data_location: pathlib.Path = pathlib.Path(__file__).parents[1] / "data",
     ) -> None:
-        self._cookie = session
+        self._cookie = cookie
         self._cache_location = cache_location
         self._data_location = data_location
         self._rate_limited_until = time.monotonic()
@@ -227,44 +231,84 @@ def _scrape_today(session: Session) -> None:
 SAVED_COOKIES_PATH = pathlib.Path(__file__).with_suffix(".sessions.json")
 
 
-def _read_cookies() -> dict[int, str]:
-    with SAVED_COOKIES_PATH.open() as f:
-        return {int(k): v for k, v in json.load(f).items()}
+@dataclasses.dataclass()
+class SessionsStore:
+    primary_user_id: int
+    cookies: dict[int, str]
 
+    @staticmethod
+    def read() -> SessionsStore:
+        with SAVED_COOKIES_PATH.open() as f:
+            jsn = json.load(f)
+        return SessionsStore(
+            primary_user_id=jsn.get("primary"),
+            cookies={int(k): v for k, v in jsn["cookies"].items()},
+        )
 
-def _write_cookies(cookies: dict[int, str]) -> None:
-    with SAVED_COOKIES_PATH.open("w") as f:
-        json.dump(cookies, f, indent=4, sort_keys=True)
+    @staticmethod
+    def new(user_id: int, cookie: str) -> SessionsStore:
+        return SessionsStore(
+            primary_user_id=user_id,
+            cookies={user_id: cookie},
+        )
+
+    def write(self) -> None:
+        with SAVED_COOKIES_PATH.open("w") as f:
+            json.dump(
+                {
+                    "primary": self.primary_user_id,
+                    "cookies": {str(k): v for k, v in self.cookies.items()},
+                },
+                f,
+                indent=4,
+                sort_keys=True,
+            )
+
+    def add(self, user_id: int, cookie: str, primary: bool = False) -> None:
+        self.cookies[user_id] = cookie
+        if primary:
+            self.primary_user_id = user_id
+
+    @property
+    def primary_cookie(self) -> str:
+        return self.cookies[self.primary_user_id]
 
 
 class CLI:
     @staticmethod
-    def add_session(session_cookie: str) -> None:
+    def add_session(cookie: str, primary: bool = False) -> None:
+        with Session(cookie) as session:
+            user_id = session.user_id()
+
         try:
-            cookies = _read_cookies()
+            sessions_store = SessionsStore.read()
         except FileNotFoundError:
-            cookies = {}
-        with Session(session_cookie) as session:
-            cookies[session.user_id()] = session_cookie
-        _write_cookies(cookies)
+            sessions_store = SessionsStore.new(user_id, cookie)
+
+        sessions_store.add(user_id, cookie, primary)
+
+        sessions_store.write()
 
     @staticmethod
     def scrape_answers() -> None:
-        for fingerprint, cookie in _read_cookies().items():
-            with Session(session=cookie) as session:
+        sessions_store = SessionsStore.read()
+        for _, cookie in sessions_store.cookies.items():
+            with Session(cookie=cookie) as session:
                 _scrape_answers(session)
 
     @staticmethod
     def scrape_inputs() -> None:
-        for fingerprint, cookie in _read_cookies().items():
-            with Session(session=cookie) as session:
+        sessions_store = SessionsStore.read()
+        for _, cookie in sessions_store.cookies.items():
+
+            with Session(cookie=cookie) as session:
                 _scrape_inputs(session)
 
     @staticmethod
     def today() -> None:
-        for fingerprint, cookie in _read_cookies().items():
-            with Session(session=cookie) as session:
-                _scrape_today(session)
+        sessions_store = SessionsStore.read()
+        with Session(cookie=sessions_store.primary_cookie) as session:
+            _scrape_today(session)
 
 
 if __name__ == "__main__":
