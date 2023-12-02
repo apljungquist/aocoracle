@@ -49,12 +49,13 @@ check_lint_py:
 .PHONY: check_lint_py
 
 check_lint_rs:
-	cargo clippy --tests
+	cargo clippy --tests --examples
 .PHONY: check_lint_rs
 
 ## Run unit tests for all parts of the project
 check_tests:
 	cargo test
+	cargo test --examples --release
 .PHONY: check_tests
 
 ## Run unit tests for rust code in release mode and time them

@@ -16,7 +16,7 @@ mod y2021;
 mod y2022;
 mod y2023;
 
-#[derive(Eq, Ord, PartialEq, PartialOrd, Clone, Copy, Deserialize)]
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Clone, Copy, Deserialize)]
 pub enum Part {
     #[serde(alias = "1")]
     One,
@@ -86,6 +86,27 @@ impl Cli {
 pub type AnyError = Box<dyn std::error::Error>;
 type Solver = dyn Fn(&str) -> anyhow::Result<String>;
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+pub struct SolverId {
+    pub year: u16,
+    day: u8,
+    part: Part,
+}
+
+impl SolverId {
+    pub fn try_new(year: u16, day: u8, part: Part) -> anyhow::Result<Self> {
+        Ok(Self { year, day, part })
+    }
+}
+
+impl std::fmt::Display for SolverId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let SolverId { year, day, part } = self;
+        let year = year % 100;
+        write!(f, "{year:02}:{day:02}::{part:01}")
+    }
+}
+
 fn boxed<F>(func: &'static F) -> Box<Solver>
 where
     F: Fn(&str) -> Result<String, AnyError>,
@@ -102,18 +123,36 @@ where
 }
 
 // TODO: It would be neat if solvers could be registered where they are implemented
-fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver>> {
+fn _available_solvers() -> BTreeMap<SolverId, Box<Solver>> {
     let mut functions: BTreeMap<_, Box<Solver>> = BTreeMap::new();
 
     macro_rules! register_solver_old {
         ($y:literal, $d:literal, $p:expr => $f:expr) => {
-            assert!(functions.insert(($y, $d, $p), boxed($f)).is_none());
+            assert!(functions
+                .insert(
+                    SolverId {
+                        year: $y,
+                        day: $d,
+                        part: $p
+                    },
+                    boxed($f)
+                )
+                .is_none());
         };
     }
 
     macro_rules! register_solver_new {
         ($y:literal, $d:literal, $p:expr => $f:expr) => {
-            assert!(functions.insert(($y, $d, $p), boxed2($f)).is_none());
+            assert!(functions
+                .insert(
+                    SolverId {
+                        year: $y,
+                        day: $d,
+                        part: $p
+                    },
+                    boxed2($f)
+                )
+                .is_none());
         };
     }
 
@@ -221,7 +260,7 @@ fn _available_solvers() -> BTreeMap<(u16, u8, Part), Box<Solver>> {
     functions
 }
 
-fn _candidates(args: &Cli) -> anyhow::Result<BTreeMap<(u16, u8, Part), Box<Solver>>> {
+fn _candidates(args: &Cli) -> anyhow::Result<BTreeMap<SolverId, Box<Solver>>> {
     let mut functions = _available_solvers();
     let mut result = BTreeMap::new();
     let parts: Vec<Part> = match args.part {
@@ -245,7 +284,7 @@ fn _candidates(args: &Cli) -> anyhow::Result<BTreeMap<(u16, u8, Part), Box<Solve
     for year in years {
         for &day in &days {
             for &part in &parts {
-                let key = (year, day, part);
+                let key = SolverId { year, day, part };
                 if let Some(func) = functions.remove(&key) {
                     result.insert(key, func);
                 }
@@ -260,14 +299,14 @@ fn _candidates(args: &Cli) -> anyhow::Result<BTreeMap<(u16, u8, Part), Box<Solve
     Ok(result)
 }
 
-pub fn helper(args: &Cli, text: &str) -> anyhow::Result<BTreeMap<(u16, u8, Part), String>> {
+pub fn helper(args: &Cli, text: &str) -> anyhow::Result<BTreeMap<SolverId, String>> {
     let candidates = _candidates(args)?;
     if candidates.is_empty() {
         bail!("Invalid combination of year, day and part");
     }
 
     let mut result = BTreeMap::new();
-    for ((year, day, part), func) in candidates.iter() {
+    for (SolverId { year, day, part }, func) in candidates.iter() {
         log::debug!("Trying year {} day {} part {}", year, day, part);
         match func(text) {
             Ok(output) => {
@@ -285,7 +324,10 @@ pub fn helper(args: &Cli, text: &str) -> anyhow::Result<BTreeMap<(u16, u8, Part)
     }
     Ok(result
         .into_iter()
-        .flat_map(|((y, d), vs)| vs.into_iter().map(move |(p, v)| ((y, d, p), v)))
+        .flat_map(|((year, day), vs)| {
+            vs.into_iter()
+                .map(move |(part, v)| (SolverId { year, day, part }, v))
+        })
         .collect())
 }
 
@@ -295,7 +337,7 @@ pub fn helper_text(args: &Cli, text: &str) -> anyhow::Result<Vec<String>> {
         false => structured.iter().map(|(_, v)| v.to_string()).collect(),
         true => structured
             .iter()
-            .map(|((y, d, p), v)| format!("{y:04}:{d:02}::{p:01} = {v}"))
+            .map(|(SolverId { year, day, part }, v)| format!("{year:04}:{day:02}::{part:01} = {v}"))
             .collect(),
     })
 }
@@ -329,10 +371,9 @@ mod tests {
             .cloned()
             .sorted()
             .collect();
-        let row_headers_width = row_headers.iter().map(|rh| rh.len()).max().ok_or(format!(
-            "Expected at least one row but got {}",
-            row_headers.len()
-        ))?;
+        let row_headers_width = row_headers.iter().map(|rh| rh.len()).max().ok_or_else(|| {
+            anyhow::anyhow!("Expected at least one row but got {}", row_headers.len())
+        })?;
         let col_widths: Vec<usize> = cols
             .iter()
             .map(|(col_header, cells)| {
@@ -408,18 +449,19 @@ mod tests {
                 }
             };
             // Assume that if it is not implemented it will not be among actual_answers
-            for (solver_year, solver_day, part) in _available_solvers().into_keys() {
-                let solver_key = || format!("{solver_year}:{solver_day:02}::{part}");
-                let correct_key = input_year == solver_year && input_day == solver_day;
-                let expected_answer = expected_answer(input_year, input_day, part, &stem);
-                let actual_answer = actual_answers.remove(&(solver_year, solver_day, part));
+            for solver_id in _available_solvers().into_keys() {
+                let correct_key = input_year == solver_id.year && input_day == solver_id.day;
+                let expected_answer = expected_answer(input_year, input_day, solver_id.part, &stem);
+                let actual_answer = actual_answers.remove(&solver_id);
                 match (correct_key, actual_answer, expected_answer) {
                     (false, None, _) => {
                         num_true_negative += 1;
                     }
                     (false, Some(a), _) => {
                         num_insertion += 1;
-                        let entry = cols.entry(solver_key()).or_insert_with(BTreeMap::new);
+                        let entry = cols
+                            .entry(solver_id.to_string())
+                            .or_insert_with(BTreeMap::new);
                         assert_eq!(
                             entry.insert(input_key(), a),
                             None,
@@ -431,7 +473,9 @@ mod tests {
                     }
                     (true, None, Some(_)) => {
                         num_deletion += 1;
-                        let entry = cols.entry(solver_key()).or_insert_with(BTreeMap::new);
+                        let entry = cols
+                            .entry(solver_id.to_string())
+                            .or_insert_with(BTreeMap::new);
                         assert_eq!(
                             entry.insert(input_key(), "-".into()),
                             None,
@@ -446,7 +490,9 @@ mod tests {
                     }
                     (true, Some(a), Some(_)) => {
                         num_substitution += 1;
-                        let entry = cols.entry(solver_key()).or_insert_with(BTreeMap::new);
+                        let entry = cols
+                            .entry(solver_id.to_string())
+                            .or_insert_with(BTreeMap::new);
                         assert_eq!(
                             entry.insert(input_key(), a),
                             None,

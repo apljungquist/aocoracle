@@ -21,6 +21,9 @@ serde_json = "1.0.87"
 structopt = "0.3.21"
 thiserror = "1.0.37"
 
+[dev-dependencies]
+aocdata = {path = "../aocdata"}
+
 [lib]
 name = "aoclib"
 path = "src/aoclib.rs"
