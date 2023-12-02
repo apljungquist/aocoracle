@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import datetime
+import functools
 import hashlib
 import itertools
 import json
@@ -146,6 +147,7 @@ class Session:
             more_itertools.one(re.finditer(r"\(anonymous user #(\d+)\)", page))[1]
         )
 
+    @functools.cache
     def user_id(self) -> int:
         cache_path = self._download("settings", None, ".html")
         content = cache_path.read_text()
