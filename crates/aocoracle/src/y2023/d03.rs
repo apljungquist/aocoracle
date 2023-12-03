@@ -10,6 +10,12 @@ struct Input {
 
 impl Input {
     fn parse(input: &str) -> anyhow::Result<Self> {
+        let mut lines = input.lines();
+        let width = lines.next().ok_or(anyhow::anyhow!("Expected at least one line"))?.len();
+        if !lines.all(|line| line.len() == width) {
+            anyhow::bail!("Expected all lines to have the same length");
+        }
+
         let re = regex::Regex::new(r"([0-9]+|[^0-9])").expect("Hard coded regex is valid");
 
         let mut next_number_id = 0;
