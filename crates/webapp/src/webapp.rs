@@ -85,7 +85,7 @@ impl Component for Model {
                     }
                 } else {
                     html! {
-                        <span>{ "I don't know!" }</span>
+                        <span>{ r"¯\_(ツ)_/¯" }</span>
                     }
                 }
             } else {
