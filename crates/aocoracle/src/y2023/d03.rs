@@ -1,128 +1,115 @@
-use hashbrown::{HashMap, HashSet};
+use std::collections::BTreeMap;
+
+use hashbrown::HashSet;
 use itertools::Itertools;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-struct Number {
-    value: usize,
-    id: usize,
+struct Input {
+    symbols: BTreeMap<(isize, isize), bool>,
+    numbers: BTreeMap<(isize, isize), (usize, u32)>,
 }
 
-pub fn part_1(input: &str) -> anyhow::Result<usize> {
-    let re = regex::Regex::new(&format!("([0-9]+|[^0-9])")).expect("Hard coded regex is valid");
-    ;
+impl Input {
+    fn parse(input: &str) -> anyhow::Result<Self> {
+        let re = regex::Regex::new(r"([0-9]+|[^0-9])").expect("Hard coded regex is valid");
 
-    let mut next_id = 0;
-    let mut numbers = HashMap::new();
-    let mut symbols = HashMap::new();
+        let mut next_number_id = 0;
+        let mut numbers = BTreeMap::new();
+        let mut symbols = BTreeMap::new();
 
-    for (row_num, line) in input.lines().enumerate() {
-        let row_num = row_num as isize;
+        for (row_num, line) in input.lines().enumerate() {
+            let row_num: isize = row_num.try_into()?;
+            let mut col_num: isize = 0;
+            for token in re.captures_iter(line) {
+                let token = token
+                    .get(1)
+                    .expect("Hard coded regex always matches exactly one group")
+                    .as_str();
 
-        let mut col_num: isize = 0;
-        for token in re.captures_iter(line) {
-            let token = token.get(1).unwrap().as_str();
-
-            if let Ok(number) = token.parse() {
-                for _ in 0..token.len() {
-                    numbers.insert((row_num, col_num), Number { id: next_id, value: number });
-                    col_num += 1;
-                }
-                next_id += 1;
-            } else if token != "." {
-                symbols.insert((row_num, col_num), token.to_string());
-                col_num += 1;
-            } else {
-                col_num += 1;
-            }
-        }
-    }
-
-    let mut used_numbers = HashSet::new();
-
-    // for ((r,c), s) in symbols.iter().sorted() {
-    //     println!("{r}, {c}: {s}");
-    // }
-    // for ((r,c), s) in numbers.iter().sorted() {
-    //     println!("{r}, {c}: {}({})", s.value, s.id);
-    // }
-
-    let mut sum = 0;
-    for ((r, c), s) in symbols.iter().sorted() {
-        //         println!("{s} @ {r}, {c}");
-        for dr in -1..=1 {
-            for dc in -1..=1 {
-                if dr == 0 && dc == 0 {
-                    continue;
-                }
-                let row = r + dr;
-                let col = c + dc;
-                if let Some(number) = numbers.get(&(row, col)) {
-                    if used_numbers.insert(number.id) {
-                        // println!("{} @ {row}, {col}", number.value);
-                        sum += number.value;
+                match token.parse::<u32>() {
+                    Ok(number) => {
+                        for _ in 0..token.len() {
+                            numbers.insert((row_num, col_num), (next_number_id, number));
+                            col_num += 1;
+                        }
+                        next_number_id += 1;
                     }
+                    Err(e) => match e.kind() {
+                        std::num::IntErrorKind::InvalidDigit => {
+                            let token = token.chars().exactly_one().expect(
+                                "Hard coded regex matches a valid number or a single symbol",
+                            );
+                            match token {
+                                '.' => {}
+                                '*' => {
+                                    symbols.insert((row_num, col_num), true);
+                                }
+                                '#' | '$' | '%' | '&' | '+' | '-' | '/' | '=' | '@' => {
+                                    symbols.insert((row_num, col_num), false);
+                                }
+                                _ => anyhow::bail!("Invalid symbol"),
+                            }
+                            col_num += 1;
+                        }
+                        _ => anyhow::bail!("Expected small numbers and symbols but got {}", token),
+                    },
                 }
             }
         }
-    }
-    Ok(sum)
-}
 
-pub fn part_2(input: &str) -> anyhow::Result<usize> {
-
-    let re = regex::Regex::new(&format!("([0-9]+|[^0-9])")).expect("Hard coded regex is valid");
-    ;
-
-    let mut next_id = 0;
-    let mut numbers = HashMap::new();
-    let mut symbols = HashMap::new();
-
-    for (row_num, line) in input.lines().enumerate() {
-        let row_num = row_num as isize;
-
-        let mut col_num: isize = 0;
-        for token in re.captures_iter(line) {
-            let token = token.get(1).unwrap().as_str();
-
-            if let Ok(number) = token.parse() {
-                for _ in 0..token.len() {
-                    numbers.insert((row_num, col_num), Number { id: next_id, value: number });
-                    col_num += 1;
-                }
-                next_id += 1;
-            } else if token != "." {
-                symbols.insert((row_num, col_num), token.to_string());
-                col_num += 1;
-            } else {
-                col_num += 1;
-            }
+        if numbers.is_empty() {
+            anyhow::bail!("No numbers found");
         }
+        if !symbols.values().any(|&could_be_gear| could_be_gear) {
+            anyhow::bail!("No potential gear found");
+        }
+
+        Ok(Self { symbols, numbers })
     }
 
-
-    let mut sum = 0;
-    for ((r, c), s) in symbols.into_iter() {
-        if s != "*" {
-            continue;
-        }
-        let mut used_numbers = HashSet::new();
+    fn adjacent_numbers(&self, row: isize, col: isize) -> Vec<(usize, u32)> {
         let mut adjacent_numbers = Vec::new();
         for dr in -1..=1 {
             for dc in -1..=1 {
                 if dr == 0 && dc == 0 {
                     continue;
                 }
-                let row = r + dr;
-                let col = c + dc;
-                if let Some(number) = numbers.get(&(row, col)) {
-                    if used_numbers.insert(number.id) {
-                        adjacent_numbers.push(number);
-                    }
+                let row = row + dr;
+                let col = col + dc;
+                if let Some(number) = self.numbers.get(&(row, col)) {
+                    adjacent_numbers.push(*number);
                 }
             }
         }
+        adjacent_numbers
+    }
+}
+
+pub fn part_1(input: &str) -> anyhow::Result<u32> {
+    let input = Input::parse(input)?;
+    let mut used_ids = HashSet::new();
+    let mut sum = 0;
+    for ((r, c), _) in input.symbols.iter() {
+        for (id, value) in input.adjacent_numbers(*r, *c) {
+            if used_ids.insert(id) {
+                sum += value;
+            }
+        }
+    }
+    Ok(sum)
+}
+
+pub fn part_2(input: &str) -> anyhow::Result<u32> {
+    let input = Input::parse(input)?;
+
+    let mut sum = 0;
+    for ((r, c), could_be_gear) in input.symbols.iter() {
+        if !could_be_gear {
+            continue;
+        }
+        let adjacent_numbers: BTreeMap<usize, u32> =
+            input.adjacent_numbers(*r, *c).into_iter().collect();
         if adjacent_numbers.len() == 2 {
-            sum += adjacent_numbers[0].value * adjacent_numbers[1].value
+            sum += adjacent_numbers.values().product::<u32>();
         }
     }
     Ok(sum)
@@ -130,8 +117,8 @@ pub fn part_2(input: &str) -> anyhow::Result<usize> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Part;
     use crate::testing::{assert_correct_answer_on_correct_input, assert_error_on_wrong_input};
+    use crate::Part;
 
     use super::*;
 
@@ -142,7 +129,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "INPUT", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "6107a576a7163737", Part::One);
     }
 
     #[test]
@@ -152,7 +139,7 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "6107a576a7163737", Part::Two);
     }
 
     #[test]
