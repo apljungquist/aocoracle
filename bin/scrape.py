@@ -128,7 +128,7 @@ class Session:
             for key in keys:
                 if key not in self._answers:
                     logger.debug("Creating default answer %s", key)
-                    self._answers.setdefault(key, "")
+                    self._answers.setdefault(key, "0")
 
     def set_default_example(self, year: int, day: int) -> None:
         file_location = (
