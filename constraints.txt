@@ -18,13 +18,19 @@ mkhelp==0.2
     # via -r requirements.txt
 more-itertools==8.12.0
     # via sprig
-mypy-extensions==0.4.3
-    # via black
+mypy==1.7.1
+    # via -r requirements.txt
+mypy-extensions==1.0.0
+    # via
+    #   black
+    #   mypy
 pathspec==0.9.0
     # via black
 platformdirs==2.4.0
     # via black
 requests==2.28.1
+    # via -r requirements.txt
+ruff==0.1.6
     # via -r requirements.txt
 six==1.16.0
     # via fire
@@ -33,10 +39,13 @@ sprig==0.5.1
 termcolor==1.1.0
     # via fire
 tomli==1.2.2
-    # via black
-typing-extensions==4.0.1
     # via
     #   black
+    #   mypy
+typing-extensions==4.8.0
+    # via
+    #   black
+    #   mypy
     #   sprig
 urllib3==1.26.12
     # via requests

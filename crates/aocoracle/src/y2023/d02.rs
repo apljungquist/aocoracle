@@ -1,5 +1,5 @@
 use anyhow::bail;
-use hashbrown::HashMap;
+use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Eq, Hash, PartialEq)]
@@ -17,7 +17,7 @@ impl FromStr for Color {
             "red" => Color::Red,
             "green" => Color::Green,
             "blue" => Color::Blue,
-            c => bail!("Unexpected color {}", c),
+            c => bail!("Expected one of 'red', 'green', or 'blue' but got {:?}", c),
         })
     }
 }
@@ -28,7 +28,7 @@ fn parsed_draw(text: &str) -> anyhow::Result<HashMap<Color, usize>> {
         let (count, color) = pair
             .trim()
             .split_once(' ')
-            .ok_or_else(||anyhow::anyhow!("Could not split pair {pair:?}"))?;
+            .ok_or_else(|| anyhow::anyhow!("Expected exactly one interior ' ' but got {pair:?}"))?;
         let count = count.parse()?;
         let color = color.parse()?;
         retval.insert(color, count);
@@ -38,11 +38,11 @@ fn parsed_draw(text: &str) -> anyhow::Result<HashMap<Color, usize>> {
 fn parsed_game(line: &str) -> anyhow::Result<(usize, Vec<HashMap<Color, usize>>)> {
     let (name, draws) = line
         .split_once(':')
-        .ok_or_else(||anyhow::anyhow!("Could not split game {line:?}"))?;
+        .ok_or_else(|| anyhow::anyhow!("Expected exactly one ':' but got {line:?}"))?;
     let (prefix, num) = name
         .trim()
         .split_once(' ')
-        .ok_or_else(||anyhow::anyhow!("Could not split name {name:?}"))?;
+        .ok_or_else(|| anyhow::anyhow!("Expected exactly one interior ' ' but got {name:?}"))?;
     if prefix != "Game" {
         bail!("Expected line starting with 'Game' but gout {line:}");
     }
@@ -108,22 +108,22 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "example", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "6bb0c0bd67", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "9db369b71386bf64", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2, "example", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "9db369b71386bf64", Part::Two);
     }
 
     #[test]

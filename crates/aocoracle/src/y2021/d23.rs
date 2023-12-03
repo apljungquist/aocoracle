@@ -411,22 +411,22 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "example", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "6bb0c0bd67", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "a91160452e896c38", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2, "example", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "6bb0c0bd67", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "a91160452e896c38", Part::Two);
     }
 
     #[test]

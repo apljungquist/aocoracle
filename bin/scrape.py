@@ -1,107 +1,124 @@
 #!/usr/bin/env python3
+
+from __future__ import annotations
+
+import dataclasses
 import datetime
 import functools
 import hashlib
 import itertools
 import json
 import logging
-import os
 import pathlib
+import random
 import re
 import time
-from typing import Optional
+from typing import Any, Optional
 
+import env_logger
 import fire
+import more_itertools
 import requests
-from sprig import dictutils
+from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
+
+
+def _pretty_answer_name(year: int, day: int, part: int) -> str:
+    return f"{year:04}:{day:02}:?:{part:01}"
+
+
+def _pretty_input_name(year: int, day: int) -> str:
+    return f"{year:04}:{day:02}"
 
 
 class AnswerNotFoundError(Exception):
     ...
 
 
+def _hexdigest(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
+
+
 class Session:
     def __init__(
         self,
-        session: str,
-        cache_location: pathlib.Path = pathlib.Path(__file__).parents[1] / "data",
-        user_fingerprint: Optional[str] = None,
+        cookie: str,
+        cache_location: pathlib.Path = pathlib.Path(__file__).parents[1] / "cache",
+        data_location: pathlib.Path = pathlib.Path(__file__).parents[1] / "data",
     ) -> None:
-        self._cookie = session
-        self._answers = {}
+        self._cookie = cookie
         self._cache_location = cache_location
-        self._answers_location = cache_location / "answers.json"
+        self._data_location = data_location
         self._rate_limited_until = time.monotonic()
-        self._user_fingerprint = user_fingerprint
+        self.rng = random.Random(0)
 
-    def __enter__(self):
-        with self._answers_location.open() as f:
-            self._answers = dictutils.deflate(json.load(f))
+    @property
+    def index_location(self) -> pathlib.Path:
+        return self._cache_location / f"{self.user_id()}.json"
+
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        with self._answers_location.open("w") as f:
-            json.dump(dictutils.inflate(self._answers), f, sort_keys=True, indent=2)
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        pass
 
-    @functools.cache
-    def _get_text(self, url: str) -> str:
+    def _download(self, path: str, user_id: Optional[int], suffix: str) -> pathlib.Path:
+        if user_id is None:
+            preliminary: Optional[pathlib.Path] = None
+        else:
+            stem = path.replace("-", "--").replace("/", "-")
+            preliminary = (
+                self._cache_location / "user" / str(user_id) / stem
+            ).with_suffix(suffix)
+
+        if preliminary is not None and preliminary.exists():
+            logger.debug("Using cache for %s", preliminary)
+            return preliminary
+
         delay = max(0.0, self._rate_limited_until - time.monotonic())
-        logger.info("Downloading %s after %3.1f second delay", url, delay)
+        logger.info("Downloading %s after %3.1f second delay", path, delay)
         time.sleep(delay)
         resp = requests.get(
-            url,
+            "https://adventofcode.com/" + path,
             cookies={"session": self._cookie},
         )
         # Compromise between me being impatient and not wanting to hammer the server
-        self._rate_limited_until = time.monotonic() + 10
+        self._rate_limited_until = time.monotonic() + self.rng.gauss(10, 2)
         resp.raise_for_status()
-        return resp.text
+        content = resp.text
 
-    @functools.cache
-    def _input(self, year: int, day: int) -> str:
-        return self._get_text(f"https://adventofcode.com/{year}/day/{day}/input")
+        if preliminary is None:
+            stem = _hexdigest(content)
+            final = (self._cache_location / "other" / stem).with_suffix(suffix)
+        else:
+            final = preliminary
 
-    @functools.cache
-    def _question(self, year: int, day: int) -> str:
-        return self._get_text(f"https://adventofcode.com/{year}/day/{day}")
+        logger.debug("Populating cache for %s", final)
+        final.parent.mkdir(exist_ok=True, parents=True)
+        final.write_text(content)
+        return final
 
-    def user_fingerprint(self) -> str:
-        if self._user_fingerprint is None:
-            self._user_fingerprint = hashlib.sha1(
-                self._input(2020, 2).encode("ascii")
-            ).hexdigest()[:10]
-        return self._user_fingerprint
+    def input_path(self, year: int, day: int, stem: str) -> pathlib.Path:
+        return (
+            self._data_location / f"{year:04}" / f"{day:02}" / "inputs" / f"{stem}.txt"
+        )
 
     def input(self, year: int, day: int) -> str:
-        file_location = (
-            self._cache_location
-            / "inputs"
-            / f"{year:04}"
-            / f"{day:02}"
-            / f"{self.user_fingerprint()}.txt"
-        )
-        if not file_location.exists():
-            file_location.parent.mkdir(exist_ok=True, parents=True)
-            file_location.write_text(self._input(year, day))
-        return file_location.read_text()
+        cache_path = self._download(f"{year}/day/{day}/input", self.user_id(), ".txt")
+        content = cache_path.read_text()
+        stem = _hexdigest(content)
+        data_path = self.input_path(year, day, stem)
+        if data_path.exists():
+            logger.debug("Reusing input %s", data_path)
+        else:
+            logger.debug("Creating input %s", data_path)
+            data_path.parent.mkdir(parents=True, exist_ok=True)
+            data_path.write_text(content)
+        return data_path.read_text()
 
-    def question(self, year: int, day: int) -> str:
-        file_location = (
-            self._cache_location
-            / "questions"
-            / f"{year:04}"
-            / f"{day:02}"
-            / f"{self.user_fingerprint()}.html"
-        )
-        if not file_location.exists():
-            file_location.parent.mkdir(exist_ok=True, parents=True)
-            file_location.write_text(self._question(year, day))
-        return file_location.read_text()
-
-    def _answer(self, year: int, day: int, part: int) -> str:
-        question = self.question(year, day)
+    @staticmethod
+    def parsed_answer(question: str, part: int) -> str:
         answers = {
             i: m[1]
             for i, m in enumerate(
@@ -113,114 +130,188 @@ class Session:
         except KeyError as e:
             raise AnswerNotFoundError from e
 
-    def answer(self, year: int, day: int, part: int) -> str:
-        key = f"{year:04}/{day:02}/{part}/{self.user_fingerprint()}"
-        if key not in self._answers:
-            self._answers[key] = self._answer(year, day, part)
-        return self._answers[key]
-
-    def set_default_answers(self, year: int, day: int) -> None:
-        for part in [1, 2]:
-            keys = [
-                f"{year:04}/{day:02}/{part}/{self.user_fingerprint()}",
-                f"{year:04}/{day:02}/{part}/example",
-            ]
-            for key in keys:
-                if key not in self._answers:
-                    logger.debug("Creating default answer %s", key)
-                    self._answers.setdefault(key, "0")
-
-    def set_default_example(self, year: int, day: int) -> None:
-        file_location = (
-            self._cache_location
-            / "inputs"
+    def answer_path(self, year: int, day: int, part: int, stem: str) -> pathlib.Path:
+        return (
+            self._data_location
             / f"{year:04}"
             / f"{day:02}"
-            / f"example.txt"
+            / "answers"
+            / f"{part:1}"
+            / f"{stem}.txt"
         )
-        if not file_location.exists():
-            logger.debug("Creating default input %s", file_location)
-            file_location.touch()
+
+    def answer(self, year: int, day: int, part: int) -> str:
+        cache_path = self._download(f"{year}/day/{day}", self.user_id(), ".html")
+        stem = _hexdigest(self.input(year, day))
+        data_path = self.answer_path(year, day, part, stem)
+        if data_path.exists():
+            logger.debug("Reusing answer %s", data_path)
+            content = data_path.read_text()
+        else:
+            content = self.parsed_answer(cache_path.read_text(), part)
+            logger.debug("Creating answer %s", data_path)
+            data_path.parent.mkdir(parents=True, exist_ok=True)
+            data_path.write_text(content)
+        return content
+
+    @staticmethod
+    def parsed_user_id(page: str) -> int:
+        return int(
+            more_itertools.one(re.finditer(r"\(anonymous user #(\d+)\)", page))[1]
+        )
+
+    @functools.cache
+    def user_id(self) -> int:
+        cache_path = self._download("settings", None, ".html")
+        content = cache_path.read_text()
+        return self.parsed_user_id(content)
+
+    def create_answer(self, year: int, day: int, part: int, stem: str) -> None:
+        path = self.answer_path(year, day, part, stem)
+        if path.exists():
+            logger.warning("Answer already exists %s", path)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+            logger.debug("Creating empty answer %s", path)
+
+    def create_input(self, year: int, day: int, stem: str, content: str = "") -> None:
+        path = self.input_path(year, day, stem)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            logger.warning("Input already exists %s", path)
+        else:
+            logger.debug("Creating empty input %s", path)
+            path.write_text(content)
 
 
 def _scrape_answers(session: Session) -> None:
-    logger.info(f"Scraping {session.user_fingerprint()} for answers")
+    logger.info(f"Scraping {session.user_id()} for answers")
     for year in itertools.count(2015):
         for day in range(1, 26):
             for part in [1, 2]:
                 try:
                     session.answer(year, day, part)
                 except AnswerNotFoundError:
-                    logger.debug("No answer for found %s/%s/%s", year, day, part)
+                    logger.debug(
+                        "No answer found for  %s", _pretty_answer_name(year, day, part)
+                    )
                 except requests.HTTPError:
                     logger.debug(
-                        "Could not retrieve question for %s/%s/%s", year, day, part
+                        "Could not retrieve question for %s",
+                        _pretty_answer_name(year, day, part),
                     )
                     return
 
 
 def _scrape_inputs(session: Session) -> None:
-    logger.info(f"Scraping {session.user_fingerprint()} for inputs")
+    logger.info(f"Scraping {session.user_id()} for inputs")
     for year in itertools.count(2015):
         for day in range(1, 26):
             try:
                 session.input(year, day)
             except requests.HTTPError:
-                logger.info("Could not retrieve input for %s/%s", year, day)
+                logger.info(
+                    "Could not retrieve input for %s", _pretty_input_name(year, day)
+                )
                 return
 
 
 def _scrape_today(session: Session) -> None:
     now = datetime.datetime.now()
-    session.input(year=now.year, day=now.day)
-    session.set_default_answers(year=now.year, day=now.day)
-    session.set_default_example(year=now.year, day=now.day)
+    year, day = now.year, now.day
+
+    session.create_input(year, day, "EXAMPLE")
+    session.create_input(year, day, "INPUT", session.input(year, day))
+    for part in [1, 2]:
+        session.create_answer(year, day, part, "EXAMPLE")
+        session.create_answer(year, day, part, "INPUT")
 
 
 SAVED_COOKIES_PATH = pathlib.Path(__file__).with_suffix(".sessions.json")
 
 
-def _read_cookies() -> dict[str, str]:
-    with SAVED_COOKIES_PATH.open() as f:
-        return json.load(f)
+@dataclasses.dataclass()
+class SessionsStore:
+    primary_user_id: int
+    cookies: dict[int, str]
 
+    @staticmethod
+    def read() -> SessionsStore:
+        with SAVED_COOKIES_PATH.open() as f:
+            jsn = json.load(f)
+        return SessionsStore(
+            primary_user_id=jsn.get("primary"),
+            cookies={int(k): v for k, v in jsn["cookies"].items()},
+        )
 
-def _write_cookies(cookies: dict[str, str]) -> None:
-    with SAVED_COOKIES_PATH.open("w") as f:
-        json.dump(cookies, f, indent=4, sort_keys=True)
+    @staticmethod
+    def new(user_id: int, cookie: str) -> SessionsStore:
+        return SessionsStore(
+            primary_user_id=user_id,
+            cookies={user_id: cookie},
+        )
+
+    def write(self) -> None:
+        with SAVED_COOKIES_PATH.open("w") as f:
+            json.dump(
+                {
+                    "primary": self.primary_user_id,
+                    "cookies": {str(k): v for k, v in self.cookies.items()},
+                },
+                f,
+                indent=4,
+                sort_keys=True,
+            )
+
+    def add(self, user_id: int, cookie: str, primary: bool = False) -> None:
+        self.cookies[user_id] = cookie
+        if primary:
+            self.primary_user_id = user_id
+
+    @property
+    def primary_cookie(self) -> str:
+        return self.cookies[self.primary_user_id]
 
 
 class CLI:
     @staticmethod
-    def add_session(session_cookie: str) -> None:
+    def add_session(cookie: str, primary: bool = False) -> None:
+        with Session(cookie) as session:
+            user_id = session.user_id()
+
         try:
-            cookies = _read_cookies()
+            sessions_store = SessionsStore.read()
         except FileNotFoundError:
-            cookies = {}
-        with Session(session_cookie) as session:
-            user_fingerprint = session.user_fingerprint()
-        cookies[user_fingerprint] = session_cookie
-        _write_cookies(cookies)
+            sessions_store = SessionsStore.new(user_id, cookie)
+
+        sessions_store.add(user_id, cookie, primary)
+
+        sessions_store.write()
 
     @staticmethod
     def scrape_answers() -> None:
-        for fingerprint, cookie in _read_cookies().items():
-            with Session(session=cookie, user_fingerprint=fingerprint) as session:
+        sessions_store = SessionsStore.read()
+        for _, cookie in sessions_store.cookies.items():
+            with Session(cookie=cookie) as session:
                 _scrape_answers(session)
 
     @staticmethod
     def scrape_inputs() -> None:
-        for fingerprint, cookie in _read_cookies().items():
-            with Session(session=cookie, user_fingerprint=fingerprint) as session:
+        sessions_store = SessionsStore.read()
+        for _, cookie in sessions_store.cookies.items():
+
+            with Session(cookie=cookie) as session:
                 _scrape_inputs(session)
 
     @staticmethod
     def today() -> None:
-        for fingerprint, cookie in _read_cookies().items():
-            with Session(session=cookie, user_fingerprint=fingerprint) as session:
-                _scrape_today(session)
+        sessions_store = SessionsStore.read()
+        with Session(cookie=sessions_store.primary_cookie) as session:
+            _scrape_today(session)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=getattr(logging, os.environ.get("LEVEL", "WARNING")))
+    # logging.basicConfig(level=getattr(logging, os.environ.get("LEVEL", "WARNING")))
+    env_logger.configure()
     fire.Fire(CLI)

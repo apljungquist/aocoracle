@@ -1,3 +1,13 @@
 [tool.isort]
 line_length = 88
 profile = "black"
+
+[tool.mypy]
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    'fire',
+    'requests'
+]
+ignore_missing_imports = true
