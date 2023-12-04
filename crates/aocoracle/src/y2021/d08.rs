@@ -12,6 +12,13 @@ fn _display(line: &str) -> Vec<Vec<String>> {
 }
 
 fn _displays(text: &str) -> Result<Vec<Vec<Vec<String>>>, AnyError> {
+    for c in text.bytes() {
+        if !(b'a'..=b'g').contains(&c) && c != b' ' && c != b'|' && c != b'\n' {
+            return Err(
+                format!("Expected every character to be in the range [a-g] but got {c}").into(),
+            );
+        }
+    }
     let result: Vec<Vec<Vec<String>>> = text.lines().map(_display).collect();
     if result.iter().filter(|d| d.len() != 2).count() > 0 {
         return Err("Expected every example to have _signal patterns_ and _output value_".into());
