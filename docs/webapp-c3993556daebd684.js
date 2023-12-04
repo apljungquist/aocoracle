@@ -521,8 +521,8 @@ function getImports() {
     imports.wbg.__wbindgen_throw = function(arg0, arg1) {
         throw new Error(getStringFromWasm0(arg0, arg1));
     };
-    imports.wbg.__wbindgen_closure_wrapper2134 = function(arg0, arg1, arg2) {
-        const ret = makeClosure(arg0, arg1, 766, __wbg_adapter_18);
+    imports.wbg.__wbindgen_closure_wrapper2164 = function(arg0, arg1, arg2) {
+        const ret = makeClosure(arg0, arg1, 782, __wbg_adapter_18);
         return addHeapObject(ret);
     };
 
@@ -561,7 +561,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('webapp-84249c440a1c8481_bg.wasm', import.meta.url);
+        input = new URL('webapp-c3993556daebd684_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
