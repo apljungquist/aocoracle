@@ -8,6 +8,15 @@ fn sheet(input: &str) -> Vec<(i64, i64)> {
         .map(|(t, d)| (t.parse().unwrap(), d.parse().unwrap()))
         .collect()
 }
+fn race(input: &str) -> anyhow::Result<(i64, i64)> {
+    let mut lines = input.lines();
+    let (time_title, times) = lines.next().unwrap().split_once(':').unwrap();
+    let (distance_title, distances) = lines.next().unwrap().split_once(':').unwrap();
+    // concatenate the strings in times
+    let time = times.split_whitespace().collect::<String>().parse()?;
+    let distance = distances.split_whitespace().collect::<String>().parse()?;
+    Ok((time, distance))
+}
 
 fn num_victory(time: i64, distance: i64) -> i64 {
     let b = time as f64;
@@ -27,7 +36,8 @@ pub fn part_1(input: &str) -> anyhow::Result<i64> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
-    unimplemented!()
+    let (time, distance) = race(input)?;
+    Ok(num_victory(time, distance))
 }
 
 #[cfg(test)]
