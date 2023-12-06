@@ -1,5 +1,29 @@
+fn sheet(input: &str) -> Vec<(i64, i64)> {
+    let mut lines = input.lines();
+    let (time_title, times) = lines.next().unwrap().split_once(':').unwrap();
+    let (distance_title, distances) = lines.next().unwrap().split_once(':').unwrap();
+    times
+        .split_whitespace()
+        .zip(distances.split_whitespace())
+        .map(|(t, d)| (t.parse().unwrap(), d.parse().unwrap()))
+        .collect()
+}
+
+fn num_victory(time: i64, distance: i64) -> i64 {
+    let b = time as f64;
+    let a = -1.0;
+    let c = -(distance + 1) as f64;
+    let x1 = (-b + (b * b - 4.0 * a * c).sqrt()) / (2.0 * a);
+    let x2 = (-b - (b * b - 4.0 * a * c).sqrt()) / (2.0 * a);
+    dbg!(x1.max(x2)).floor() as i64 - dbg!(x1.min(x2)).ceil() as i64 + 1
+}
+
 pub fn part_1(input: &str) -> anyhow::Result<i64> {
-    unimplemented!()
+    let races = sheet(input);
+    Ok(races
+        .into_iter()
+        .map(|(t, d)| dbg!(num_victory(t, d)))
+        .product::<i64>())
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
