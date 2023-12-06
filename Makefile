@@ -24,7 +24,7 @@ help:
 ## ------
 
 ## Run all checks
-check: check_format check_lint check_tests check_tests_rs_duration check_types_py;
+check_all: check_format check_lint check_tests check_tests_rs_duration check_types_py;
 .PHONY: check
 
 ## Run formatters for all parts of the project
