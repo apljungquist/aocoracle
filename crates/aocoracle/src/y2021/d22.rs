@@ -139,34 +139,34 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example_s() {
-        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE_S", Part::One);
+        assert_correct_answer_on_correct_input!("EXAMPLE_S", Part::One);
     }
     #[test]
     fn part_1_works_on_example_m() {
-        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE_M", Part::One);
+        assert_correct_answer_on_correct_input!("EXAMPLE_M", Part::One);
     }
     #[test]
     fn part_1_works_on_example_l() {
-        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE_L", Part::One);
+        assert_correct_answer_on_correct_input!("EXAMPLE_L", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "bb449b26d369d484", Part::One);
+        assert_correct_answer_on_correct_input!("bb449b26d369d484", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example_l() {
-        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE_L", Part::Two);
+        assert_correct_answer_on_correct_input!("EXAMPLE_L", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "bb449b26d369d484", Part::Two);
+        assert_correct_answer_on_correct_input!("bb449b26d369d484", Part::Two);
     }
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_error_on_wrong_input!(&part_1, &part_2);
+        assert_error_on_wrong_input!(Part::One, Part::Two);
     }
 }

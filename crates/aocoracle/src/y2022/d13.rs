@@ -127,22 +127,22 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
+        assert_correct_answer_on_correct_input!("EXAMPLE", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "cb26c4d83d6ff809", Part::One);
+        assert_correct_answer_on_correct_input!("cb26c4d83d6ff809", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE", Part::Two);
+        assert_correct_answer_on_correct_input!("EXAMPLE", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "cb26c4d83d6ff809", Part::Two);
+        assert_correct_answer_on_correct_input!("cb26c4d83d6ff809", Part::Two);
     }
 
     // Fails on 2021/18/3ba7923eae and possibly others
@@ -150,6 +150,6 @@ mod tests {
     #[ignore]
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_error_on_wrong_input!(part_1, part_2);
+        assert_error_on_wrong_input!(Part::One, Part::Two);
     }
 }

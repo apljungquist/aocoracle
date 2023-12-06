@@ -416,7 +416,7 @@ mod tests {
             for (solver_year, solver_day, part) in _available_solvers().into_keys() {
                 let solver_key = || format!("{solver_year}:{solver_day:02}::{part}");
                 let correct_key = input_year == solver_year && input_day == solver_day;
-                let expected_answer = expected_answer(input_year, input_day, part, &stem);
+                let expected_answer = expected_answer(input_year, input_day, &stem, part);
                 let actual_answer = actual_answers.remove(&(solver_year, solver_day, part));
                 match (correct_key, actual_answer, expected_answer) {
                     (false, None, _) => {

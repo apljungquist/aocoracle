@@ -87,17 +87,17 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
+        assert_correct_answer_on_correct_input!("EXAMPLE", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "0bda839c0a358db4", Part::One);
+        assert_correct_answer_on_correct_input!("0bda839c0a358db4", Part::One);
     }
 
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_error_on_wrong_input!(part_1);
+        assert_error_on_wrong_input!(Part::One);
     }
 
     #[test]

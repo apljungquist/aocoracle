@@ -126,6 +126,7 @@ fn _carbon_only(input: &str) -> Result<u32, Box<dyn std::error::Error>> {
 mod tests {
     use crate::testing::{
         actual_answer, assert_correct_answer_on_correct_input, assert_error_on_wrong_input,
+        read_input, read_relevant_input,
     };
     use crate::Part;
 
@@ -133,37 +134,37 @@ mod tests {
 
     #[test]
     fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
+        assert_correct_answer_on_correct_input!("EXAMPLE", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "106da7c832c9e3da", Part::One);
+        assert_correct_answer_on_correct_input!("106da7c832c9e3da", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE", Part::Two);
+        assert_correct_answer_on_correct_input!("EXAMPLE", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "106da7c832c9e3da", Part::Two);
+        assert_correct_answer_on_correct_input!("106da7c832c9e3da", Part::Two);
     }
 
     #[ignore]
     #[test]
     fn returns_error_on_wrong_input() {
-        assert_error_on_wrong_input!(&part_1, &part_2);
+        assert_error_on_wrong_input!(Part::One, Part::Two);
     }
 
     #[test]
     fn oxygen_works_on_example() {
-        assert_eq!(actual_answer(file!(), _oxygen_only, "EXAMPLE").unwrap(), 23);
+        assert_eq!(_oxygen_only(&read_relevant_input!("EXAMPLE")).unwrap(), 23);
     }
 
     #[test]
     fn carbon_works_on_example() {
-        assert_eq!(actual_answer(file!(), _carbon_only, "EXAMPLE").unwrap(), 10);
+        assert_eq!(_carbon_only(&read_relevant_input!("EXAMPLE")).unwrap(), 23);
     }
 }
