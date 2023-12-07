@@ -13,7 +13,9 @@ fn parsed_card(c: char) -> u8 {
 fn sort_key(orig_hand: &str) -> (u8, u8, u8, u8, u8, u8) {
     let hand = orig_hand.chars().map(parsed_card).collect::<Vec<_>>();
     let counts = hand.iter().counts().into_iter().map(|(_, v)| v).counts();
-    let kind = if counts.contains_key(&4) {
+    let kind = if counts.contains_key(&5) {
+        6
+    } else if counts.contains_key(&4) {
         5
     } else if counts.contains_key(&3) && counts.contains_key(&2) {
         4
