@@ -1,7 +1,41 @@
 use anyhow::bail;
+use hashbrown::HashMap;
 
 pub fn part_1(input: &str) -> anyhow::Result<i64> {
-    Ok(0)
+    let mut lines = input.lines();
+    let mut directions = lines
+        .next()
+        .unwrap()
+        .chars()
+        .map(|c| match c {
+            'L' => 0,
+            'R' => 1,
+            _ => panic!("{c}"),
+        })
+        .cycle();
+    lines.next().unwrap();
+
+    let mut map = HashMap::new();
+    for line in lines {
+        map.insert(
+            &line.as_bytes()[..3],
+            (&line.as_bytes()[7..10], &line.as_bytes()[12..15]),
+        );
+    }
+    let target = "ZZZ".as_bytes();
+    let mut curr = "AAA".as_bytes();
+
+    let mut num_step = 0;
+    while curr != target {
+        num_step += 1;
+        let (l, r) = map.get(curr).unwrap();
+        curr = match directions.next().unwrap() {
+            0 => l,
+            1 => r,
+            _ => panic!(""),
+        };
+    }
+    Ok(num_step)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
