@@ -86,7 +86,7 @@ fn _key(patterns: &[String]) -> Key {
         .exactly_one()
         .unwrap();
 
-    vec![zero, one, two, three, four, five, six, seven, eight, nine]
+    [zero, one, two, three, four, five, six, seven, eight, nine]
         .iter()
         .enumerate()
         .map(|(i, vs)| (vs.iter().sorted().collect(), i))

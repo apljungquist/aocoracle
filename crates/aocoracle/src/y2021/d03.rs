@@ -90,7 +90,6 @@ fn _carbon(cols: &[Vec<bool>]) -> u32 {
         for (i, actual) in col.iter().enumerate() {
             if *actual != target {
                 rows.remove(&i);
-            } else {
             }
         }
         if rows.len() == 1 {

@@ -66,7 +66,7 @@ pub fn part_2(input: &str) -> Result<String, AnyError> {
     let cost = (min..=max)
         .map(|location| _quadratic_cost(&census, location))
         .min()
-        .unwrap() as u64;
+        .unwrap();
     Ok(format!("{}", cost))
 }
 

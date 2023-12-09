@@ -114,7 +114,7 @@ impl Map {
                 })
                 .collect();
         }
-        all_mapped.extend(all_unmapped.into_iter());
+        all_mapped.extend(all_unmapped);
         all_mapped
     }
 }
@@ -245,6 +245,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::single_range_in_vec_init)]
     fn split_once() {
         let map_line = MapLine {
             src_start: 10,
@@ -261,6 +262,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::single_range_in_vec_init)]
     fn split_once_again() {
         let map_line = MapLine {
             src_start: 56,
@@ -271,6 +273,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::single_range_in_vec_init)]
     fn split_twice() {
         let map = Map {
             lines: vec![
