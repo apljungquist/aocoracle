@@ -1,116 +1,70 @@
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use hashbrown::HashMap;
-use itertools::Itertools;
 
-pub fn part_1(input: &str) -> anyhow::Result<i64> {
-    let mut lines = input.lines();
-    let mut directions = lines
-        .next()
-        .unwrap()
-        .chars()
-        .map(|c| match c {
-            'L' => 0,
-            'R' => 1,
-            _ => panic!("{c}"),
-        })
-        .cycle();
-    lines.next().unwrap();
-
-    let mut map = HashMap::new();
-    for line in lines {
-        map.insert(
-            &line.as_bytes()[..3],
-            (&line.as_bytes()[7..10], &line.as_bytes()[12..15]),
-        );
-    }
-    let target = "ZZZ".as_bytes();
-    let mut curr = "AAA".as_bytes();
-
-    let mut num_step = 0;
-    while curr != target {
-        num_step += 1;
-        let (l, r) = map.get(curr).unwrap();
-        curr = match directions.next().unwrap() {
-            0 => l,
-            1 => r,
-            _ => panic!(""),
-        };
-    }
-    Ok(num_step)
+struct Input<'a> {
+    directions: Vec<usize>,
+    map: HashMap<&'a [u8], [&'a [u8]; 2]>,
 }
 
-fn is_target2(node: &[u8]) -> bool {
-    node[2] == b'Z'
+impl<'a> Input<'a> {
+    fn try_new(input: &'a str) -> anyhow::Result<Self> {
+        let mut lines = input.lines();
+        let mut directions = Vec::new();
+        for d in lines
+            .next()
+            .ok_or_else(|| anyhow!("Expected a line with directions"))?
+            .chars()
+        {
+            directions.push(match d {
+                'L' => 0,
+                'R' => 1,
+                _ => bail!("Expected L or R but got {d}"),
+            });
+        }
+        lines
+            .next()
+            .ok_or_else(|| anyhow!("Expected a blank line"))?;
+
+        let mut map = HashMap::new();
+        for line in lines {
+            map.insert(
+                &line.as_bytes()[..3],
+                [&line.as_bytes()[7..10], &line.as_bytes()[12..15]],
+            );
+        }
+        Ok(Self { directions, map })
+    }
+
+    fn num_step_until<F>(&self, start: &[u8], is_target: F) -> usize
+    where
+        F: Fn(&[u8]) -> bool,
+    {
+        let mut curr = start;
+        for (i, d) in self.directions.iter().cycle().enumerate() {
+            curr = self.map.get(curr).unwrap()[*d];
+            if is_target(curr) {
+                return i + 1;
+            }
+        }
+        unreachable!("Cycle should never end")
+    }
 }
 
-fn dbg_stage(nodes: &[&[u8]]) {
-    print!("{}", std::str::from_utf8(nodes[0]).unwrap());
-    for n in &nodes[1..] {
-        print!(", {}", std::str::from_utf8(n).unwrap());
-    }
-    println!("");
+pub fn part_1(input: &str) -> anyhow::Result<usize> {
+    let input = Input::try_new(input)?;
+    Ok(input.num_step_until(b"AAA", |node| node == b"ZZZ"))
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<i64> {
-    let mut lines = input.lines();
-    let mut directions: Vec<usize> = lines
-        .next()
-        .unwrap()
-        .chars()
-        .map(|c| match c {
-            'L' => 0,
-            'R' => 1,
-            _ => panic!("{c}"),
-        })
-        .collect();
-    lines.next().unwrap();
-
-    let mut map = HashMap::new();
-    for line in lines {
-        map.insert(
-            &line.as_bytes()[..3],
-            [&line.as_bytes()[7..10], &line.as_bytes()[12..15]],
-        );
-    }
-    let mut starts: Vec<_> = map
+pub fn part_2(input: &str) -> anyhow::Result<usize> {
+    let input = Input::try_new(input)?;
+    input
+        .map
         .keys()
         .filter(|n| n[2] == b'A')
         .cloned()
-        .sorted()
-        .collect();
-
-    let mut multiples = Vec::with_capacity(starts.len());
-    for start in starts {
-        // let mut hits = Vec::new();
-
-        let mut curr = start;
-        let mut num_step = 0;
-        for (i, d) in directions.iter().enumerate().cycle() {
-            num_step += 1;
-            curr = map.get(curr).unwrap()[*d];
-            if is_target2(curr) {
-                multiples.push(num_step);
-                break;
-                // println!(
-                //     "{} {} {}: {} {}",
-                //     std::str::from_utf8(start).unwrap(),
-                //     std::str::from_utf8(curr).unwrap(),
-                //     i,
-                //     num_step,
-                //     num_step - hits.last().unwrap_or(&0)
-                // );
-                // if hits.len() == 3 {
-                //     break;
-                // } else {
-                //     hits.push(num_step);
-                // }
-            }
-        }
-    }
-    Ok(multiples
-        .into_iter()
-        .reduce(|a, b| num::integer::lcm(a, b))
-        .unwrap())
+        .map(|start| input.num_step_until(start, |node| node[2] == b'Z'))
+        .reduce(num::integer::lcm)
+        .ok_or_else(|| anyhow!("Overflow"))
 }
 
 #[cfg(test)]
