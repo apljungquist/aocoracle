@@ -39,13 +39,8 @@ pub fn part_1(input: &str) -> anyhow::Result<i64> {
     Ok(num_step)
 }
 
-fn is_target2(nodes: &[&[u8]]) -> bool {
-    for node in nodes {
-        if node[2] != b'Z' {
-            return false;
-        }
-    }
-    return true;
+fn is_target2(node: &[u8]) -> bool {
+    node[2] == b'Z'
 }
 
 fn dbg_stage(nodes: &[&[u8]]) {
@@ -58,7 +53,7 @@ fn dbg_stage(nodes: &[&[u8]]) {
 
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
     let mut lines = input.lines();
-    let mut directions = lines
+    let mut directions: Vec<usize> = lines
         .next()
         .unwrap()
         .chars()
@@ -67,7 +62,7 @@ pub fn part_2(input: &str) -> anyhow::Result<i64> {
             'R' => 1,
             _ => panic!("{c}"),
         })
-        .cycle();
+        .collect();
     lines.next().unwrap();
 
     let mut map = HashMap::new();
@@ -77,28 +72,45 @@ pub fn part_2(input: &str) -> anyhow::Result<i64> {
             [&line.as_bytes()[7..10], &line.as_bytes()[12..15]],
         );
     }
-    let mut curr: Vec<_> = map
+    let mut starts: Vec<_> = map
         .keys()
         .filter(|n| n[2] == b'A')
         .cloned()
         .sorted()
         .collect();
-    dbg_stage(&curr);
 
-    let mut num_step = 0;
-    while !is_target2(&curr) {
-        num_step += 1;
-        let direction = directions.next().unwrap();
-        curr = curr
-            .into_iter()
-            .map(|node| map.get(node).unwrap()[direction])
-            .collect();
-        // if num_step == 100 {
-        //     break
-        // }
-        // dbg_stage(&curr);
+    let mut multiples = Vec::with_capacity(starts.len());
+    for start in starts {
+        // let mut hits = Vec::new();
+
+        let mut curr = start;
+        let mut num_step = 0;
+        for (i, d) in directions.iter().enumerate().cycle() {
+            num_step += 1;
+            curr = map.get(curr).unwrap()[*d];
+            if is_target2(curr) {
+                multiples.push(num_step);
+                break;
+                // println!(
+                //     "{} {} {}: {} {}",
+                //     std::str::from_utf8(start).unwrap(),
+                //     std::str::from_utf8(curr).unwrap(),
+                //     i,
+                //     num_step,
+                //     num_step - hits.last().unwrap_or(&0)
+                // );
+                // if hits.len() == 3 {
+                //     break;
+                // } else {
+                //     hits.push(num_step);
+                // }
+            }
+        }
     }
-    Ok(num_step)
+    Ok(multiples
+        .into_iter()
+        .reduce(|a, b| num::integer::lcm(a, b))
+        .unwrap())
 }
 
 #[cfg(test)]
@@ -109,13 +121,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn part_1_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE", Part::One);
+    fn part_1_works_on_example_a() {
+        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE_1a", Part::One);
+    }
+
+    #[test]
+    fn part_1_works_on_example_b() {
+        assert_correct_answer_on_correct_input!(part_1, "EXAMPLE_1b", Part::One);
     }
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "INPUT", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "d811eb4b1190750e", Part::One);
     }
 
     #[test]
@@ -125,7 +142,7 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "d811eb4b1190750e", Part::Two);
     }
 
     #[test]
