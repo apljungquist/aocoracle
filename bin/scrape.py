@@ -217,9 +217,12 @@ def _scrape_inputs(session: Session) -> None:
                 return
 
 
-def _scrape_today(session: Session) -> None:
+def _scrape_today(session: Session, year: Optional[int], day: Optional[int]) -> None:
     now = datetime.datetime.now()
-    year, day = now.year, now.day
+    if year is None:
+        year = now.year
+    if day is None:
+        day = now.day
 
     session.create_input(year, day, "EXAMPLE")
     session.create_input(year, day, "INPUT", session.input(year, day))
@@ -305,10 +308,10 @@ class CLI:
                 _scrape_inputs(session)
 
     @staticmethod
-    def today() -> None:
+    def today(year: Optional[int] = None, day: Optional[int] = None) -> None:
         sessions_store = SessionsStore.read()
         with Session(cookie=sessions_store.primary_cookie) as session:
-            _scrape_today(session)
+            _scrape_today(session, year, day)
 
 
 if __name__ == "__main__":
