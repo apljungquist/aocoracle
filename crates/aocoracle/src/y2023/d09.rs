@@ -11,7 +11,7 @@ fn parsed_input(input: &str) -> anyhow::Result<Vec<Vec<i64>>> {
     }
     Ok(result)
 }
-fn extrapolate(history: &[i64]) -> i64 {
+fn extrapolate(history: &[i64]) -> (i64, i64) {
     let mut diffs = vec![history.to_vec()];
     loop {
         let prev = diffs.last().unwrap();
@@ -21,19 +21,22 @@ fn extrapolate(history: &[i64]) -> i64 {
         }
         diffs.push(curr);
     }
-    let mut step = 0;
+    let mut before = 0;
+    let mut after = 0;
     while let Some(diff) = diffs.pop() {
-        step += diff.iter().last().unwrap();
+        before = -before + diff.iter().next().unwrap();
+        after += diff.iter().last().unwrap();
     }
-    step
+    (before, after)
 }
 pub fn part_1(input: &str) -> anyhow::Result<i64> {
     let histories = parsed_input(input)?;
-    Ok(histories.iter().map(|h| extrapolate(h)).sum())
+    Ok(histories.iter().map(|h| extrapolate(h).1).sum())
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+pub fn part_2(input: &str) -> anyhow::Result<i64> {
+    let histories = parsed_input(input)?;
+    Ok(histories.iter().map(|h| extrapolate(h).0).sum())
 }
 
 #[cfg(test)]
@@ -45,12 +48,12 @@ mod tests {
 
     #[test]
     fn extrapolate_works_on_first_degree_example() {
-        assert_eq!(extrapolate(&vec![0, 3, 6, 9, 12, 15]), 18);
+        assert_eq!(extrapolate(&vec![0, 3, 6, 9, 12, 15]), (-3, 18));
     }
 
     #[test]
     fn extrapolate_works_on_third_degree_example() {
-        assert_eq!(extrapolate(&vec![10, 13, 16, 21, 30, 45]), 68);
+        assert_eq!(extrapolate(&vec![10, 13, 16, 21, 30, 45]), (5, 68));
     }
 
     #[test]
