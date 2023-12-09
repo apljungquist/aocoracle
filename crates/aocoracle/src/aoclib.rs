@@ -301,7 +301,7 @@ pub fn helper(args: &Cli, text: &str) -> anyhow::Result<BTreeMap<(u16, u8, Part)
 pub fn helper_text(args: &Cli, text: &str) -> anyhow::Result<Vec<String>> {
     let structured = helper(args, text)?;
     Ok(match args.exhaustive {
-        false => structured.iter().map(|(_, v)| v.to_string()).collect(),
+        false => structured.values().map(|v| v.to_string()).collect(),
         true => structured
             .iter()
             .map(|((y, d, p), v)| format!("{y:04}:{d:02}::{p:01} = {v}"))

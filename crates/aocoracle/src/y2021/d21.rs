@@ -60,7 +60,7 @@ fn _quantum(
 
 pub fn part_1(input: &str) -> Result<String, AnyError> {
     let mut positions = _starting_positions(input)?;
-    let mut scores = vec![0; 2];
+    let mut scores = [0; 2];
     let mut i = 0;
     loop {
         for player in 0..=1 {

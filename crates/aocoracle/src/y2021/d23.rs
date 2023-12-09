@@ -302,7 +302,6 @@ fn _min_cost_from_hallway(
                 ok = true;
                 best_cost = cost;
                 best_total_cost = upstream_cost + cost;
-            } else {
             }
         }
     }
