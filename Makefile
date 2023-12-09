@@ -91,8 +91,8 @@ fix_lint_rs:
 ## Other verbs
 ## -----------
 
-## Install the recommended python dependencies for development
-install_deps_py:
+## Install the recommended dependencies for development
+sync_env: venv/bin/trunk
 	PIP_CONSTRAINT=constraints.txt pip install -r requirements.txt
 
 ## Serve webapp with automatic reloading
@@ -140,3 +140,15 @@ docs/index.html: crates/webapp/index.html
 		--public-url aocoracle \
 		--release \
 		$<
+
+venv/bin/trunk: venv/downloads/trunk-x86_64-unknown-linux-gnu.tar.gz
+	mkdir -p $(@D)
+	ls $(@D)
+	cd $(@D) \
+	&& tar -xzf ../downloads/trunk-x86_64-unknown-linux-gnu.tar.gz
+
+venv/downloads/trunk-x86_64-unknown-linux-gnu.tar.gz:
+	mkdir -p $(@D)
+	cd $(@D) \
+	&& wget https://github.com/thedodd/trunk/releases/download/v0.17.5/$(@F) \
+	&& echo "c675099200ff4e13579e4a3fbfbb6dc11375a4b779c2a9efd374f61d360ac7c7  $(@F)" | sha256sum -c
