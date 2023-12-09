@@ -11,7 +11,7 @@ env:
 
 jobs:
   integrate:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
@@ -20,6 +20,7 @@ jobs:
           lfs: true
           submodules: recursive
           token: ${{ secrets.AOCORACLE_PAT }}
+
       - name: Build
         run: cargo build --verbose
       - name: Check format
@@ -30,3 +31,32 @@ jobs:
         run: cargo test --verbose
       - name: Check publish
         run: cargo publish --dry-run --allow-dirty --package aocoracle
+      - name: Build web app
+        run: |
+          rustup target add wasm32-unknown-unknown
+          make venv/bin/trunk
+          PATH="venv/bin:${PATH}" make -B docs/index.html
+      - name: Configure pages
+        uses: actions/configure-pages@v2
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: './docs/'
+
+  deploy:
+    needs: integrate
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3
