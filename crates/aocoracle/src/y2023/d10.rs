@@ -1,5 +1,4 @@
-use std::fmt::Display;
-use std::str::FromStr;
+use std::collections::HashSet;
 
 use anyhow::{anyhow, bail};
 use itertools::Itertools;
@@ -56,7 +55,7 @@ impl Input {
             for (col_num, c) in line.chars().enumerate() {
                 let tile = Tile::from_char(&c)?;
                 if tile.is_none() {
-                    start = Some((row_num as usize, col_num as usize))
+                    start = Some((row_num, col_num))
                 }
                 row.push(tile);
             }
@@ -107,6 +106,46 @@ impl Input {
             pose = p;
         }
     }
+
+    fn rhs(&self, pose: Pose) -> Option<Vec<(usize, usize)>> {
+        use Direction::*;
+        use Tile::*;
+        let (r, c, d) = pose;
+        let tile = self.tiles[r][c]?;
+        match (tile, d) {
+            (NS, N) => Some(vec![(r, c + 1)]),
+            (NS, S) => Some(vec![(r, c.checked_sub(1)?)]),
+            (NS, _) => panic!("Not on a loop"),
+            (EW, E) => Some(vec![(r + 1, c)]),
+            (EW, W) => Some(vec![(r.checked_sub(1)?, c)]),
+            (EW, _) => panic!("Not on a loop"),
+            (NE, S) => Some(vec![
+                (r, c.checked_sub(1)?),
+                (r + 1, c.checked_sub(1)?),
+                (r + 1, c),
+            ]),
+            (NE, W) => Some(vec![(r.checked_sub(1)?, c + 1)]),
+            (NE, _) => panic!("Not on a loop"),
+            (NW, S) => Some(vec![(r.checked_sub(1)?, c.checked_sub(1)?)]),
+            (NW, E) => Some(vec![(r, c + 1), (r + 1, c + 1), (r + 1, c)]),
+            (NW, _) => panic!("Not on a loop"),
+            (SW, N) => Some(vec![
+                (r.checked_sub(1)?, c),
+                (r.checked_sub(1)?, c + 1),
+                (r, c + 1),
+            ]),
+            (SW, E) => Some(vec![(r + 1, c.checked_sub(1)?)]),
+            (SW, _) => panic!("Not on a loop"),
+            (SE, N) => Some(vec![(r + 1, c + 1)]),
+            (SE, W) => Some(vec![
+                (r.checked_sub(1)?, c),
+                (r.checked_sub(1)?, c.checked_sub(1)?),
+                (r, c.checked_sub(1)?),
+            ]),
+            (SE, _) => panic!("Not on a loop"),
+            (Ground, _) => panic!("Ground is never on a loop"),
+        }
+    }
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<usize> {
@@ -131,14 +170,69 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
     bail!("No solution")
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<i64> {
-    Ok(0)
+pub fn part_2(input: &str) -> anyhow::Result<usize> {
+    use Direction::*;
+    let input = Input::from_str(input)?;
+    'outer: for (dr, dc, d) in [(1, 0, S), (0, -1, W), (-1, 0, N), (0, 1, E)] {
+        let Some(r) = input.start.0.checked_add_signed(dr) else {
+            continue;
+        };
+        let Some(c) = input.start.1.checked_add_signed(dc) else {
+            continue;
+        };
+        let path = input.follow((r, c, d));
+        if path
+            .last()
+            .map(|p| p.0 == input.start.0 && p.1 == input.start.1)
+            .unwrap_or(false)
+        {
+            let rmax = input.tiles.len();
+            let cmax = input.tiles[0].len();
+            let boundary: HashSet<_> = path.iter().map(|(r, c, _)| (*r, *c)).collect();
+            let mut seen: HashSet<(usize, usize)> = HashSet::new();
+            let mut to_see = path
+                .into_iter()
+                .flat_map(|p| input.rhs(p))
+                .flatten()
+                .filter(|p| !boundary.contains(p))
+                .collect_vec();
+            while let Some(p) = to_see.pop() {
+                if seen.contains(&p) {
+                    continue;
+                }
+                seen.insert(p);
+                for dr in [-1, 0, 1] {
+                    for dc in [-1, 0, 1] {
+                        let Some(r) = p.0.checked_add_signed(dr) else {
+                            continue 'outer;
+                        };
+                        let Some(c) = p.1.checked_add_signed(dc) else {
+                            continue 'outer;
+                        };
+                        if cmax <= c || rmax <= r {
+                            continue 'outer;
+                        }
+                        let q = (r, c);
+                        if boundary.contains(&q) {
+                            continue;
+                        }
+                        if seen.contains(&q) {
+                            continue;
+                        }
+                        to_see.push(q);
+                    }
+                }
+            }
+            return Ok(seen.len());
+        }
+    }
+    bail!("No solution")
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::Part;
     use crate::testing::{assert_correct_answer_on_correct_input, assert_error_on_wrong_input};
+    use crate::Part;
 
     use super::*;
 
