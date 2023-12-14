@@ -1,4 +1,5 @@
 black
+condorcet
 isort
 fire
 mkhelp
