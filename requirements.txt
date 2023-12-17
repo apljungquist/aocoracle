@@ -1,8 +1,10 @@
+bar_chart_race
 black
 isort
 fire
 mkhelp
 mypy
+pandas_stubs
 pip
 requests
 ruff

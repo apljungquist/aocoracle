@@ -1,3 +1,5 @@
+bar-chart-race==0.1.0
+    # via -r requirements.txt
 black==21.12b0
     # via -r requirements.txt
 certifi==2022.9.24
@@ -6,14 +8,24 @@ charset-normalizer==2.1.1
     # via requests
 click==8.0.3
     # via black
+contourpy==1.2.0
+    # via matplotlib
+cycler==0.12.1
+    # via matplotlib
 fire==0.4.0
     # via
     #   -r requirements.txt
     #   mkhelp
+fonttools==4.46.0
+    # via matplotlib
 idna==3.4
     # via requests
 isort==5.10.1
     # via -r requirements.txt
+kiwisolver==1.4.5
+    # via matplotlib
+matplotlib==3.8.2
+    # via bar-chart-race
 mkhelp==0.2
     # via -r requirements.txt
 more-itertools==8.12.0
@@ -24,16 +36,37 @@ mypy-extensions==1.0.0
     # via
     #   black
     #   mypy
+numpy==1.26.2
+    # via
+    #   contourpy
+    #   matplotlib
+    #   pandas
+packaging==23.2
+    # via matplotlib
+pandas==2.1.4
+    # via bar-chart-race
 pathspec==0.9.0
     # via black
+pillow==10.1.0
+    # via matplotlib
 platformdirs==2.4.0
     # via black
+pyparsing==3.1.1
+    # via matplotlib
+python-dateutil==2.8.2
+    # via
+    #   matplotlib
+    #   pandas
+pytz==2023.3.post1
+    # via pandas
 requests==2.28.1
     # via -r requirements.txt
 ruff==0.1.6
     # via -r requirements.txt
 six==1.16.0
-    # via fire
+    # via
+    #   fire
+    #   python-dateutil
 sprig==0.5.1
     # via -r requirements.txt
 termcolor==1.1.0
@@ -47,6 +80,8 @@ typing-extensions==4.8.0
     #   black
     #   mypy
     #   sprig
+tzdata==2023.3
+    # via pandas
 urllib3==1.26.12
     # via requests
 
