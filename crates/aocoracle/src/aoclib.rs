@@ -15,6 +15,7 @@ mod y2020;
 mod y2021;
 mod y2022;
 mod y2023;
+mod y2024;
 
 #[derive(Eq, Ord, PartialEq, PartialOrd, Clone, Copy, Deserialize)]
 pub enum Part {
