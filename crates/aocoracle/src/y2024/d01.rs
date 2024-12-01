@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 pub fn part_1(input: &str) -> anyhow::Result<u64> {
     let mut lhs = Vec::new();
     let mut rhs = Vec::new();
@@ -14,8 +16,21 @@ pub fn part_1(input: &str) -> anyhow::Result<u64> {
     Ok(sum)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<i64> {
-    Ok(0)
+pub fn part_2(input: &str) -> anyhow::Result<usize> {
+    let mut lhs = Vec::new();
+    let mut rhs = Vec::new();
+    for line in input.lines() {
+        let mut numbers = line.split_whitespace();
+        let l = numbers.next().unwrap().parse::<i64>()?;
+        let r = numbers.next().unwrap().parse::<i64>()?;
+        lhs.push(l);
+        rhs.push(r);
+    }
+    lhs.sort();
+    rhs.sort();
+    let counts = rhs.into_iter().counts_by(|x| x);
+    let sum = lhs.into_iter().map(|(l)| {l as usize * counts.get(&l).unwrap_or(&0)}).sum();
+    Ok(sum)
 }
 
 #[cfg(test)]
