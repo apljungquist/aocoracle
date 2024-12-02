@@ -49,7 +49,7 @@ pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let counts = right.into_iter().counts_by(|x| x);
     let sum = left
         .into_iter()
-        .map(|(l)| l as usize * counts.get(&l).unwrap_or(&0))
+        .map(|l| l as usize * counts.get(&l).unwrap_or(&0))
         .sum();
     Ok(sum)
 }
