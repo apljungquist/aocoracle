@@ -14,7 +14,9 @@ impl FromStr for Lists {
         let mut left = Vec::new();
         let mut right = Vec::new();
         for line in s.lines() {
-            let (l, r) = line.split_once("   ").context("Expected location IDs to be separated by '   '")?;
+            let (l, r) = line
+                .split_once("   ")
+                .context("Expected location IDs to be separated by '   '")?;
             left.push(l.parse::<_>()?);
             right.push(r.parse::<_>()?);
         }
@@ -23,19 +25,32 @@ impl FromStr for Lists {
 }
 
 pub fn part_1(input: &str) -> anyhow::Result<u64> {
-    let Lists { mut left, mut right }: Lists = input.parse()?;
+    let Lists {
+        mut left,
+        mut right,
+    }: Lists = input.parse()?;
     left.sort_unstable();
     right.sort_unstable();
-    let sum = left.into_iter().zip(right.into_iter()).map(|(l, r)| { l.abs_diff(r) }).sum();
+    let sum = left
+        .into_iter()
+        .zip(right.into_iter())
+        .map(|(l, r)| l.abs_diff(r))
+        .sum();
     Ok(sum)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let Lists { mut left, mut right }: Lists = input.parse()?;
+    let Lists {
+        mut left,
+        mut right,
+    }: Lists = input.parse()?;
     left.sort_unstable();
     right.sort_unstable();
     let counts = right.into_iter().counts_by(|x| x);
-    let sum = left.into_iter().map(|(l)| { l as usize * counts.get(&l).unwrap_or(&0) }).sum();
+    let sum = left
+        .into_iter()
+        .map(|(l)| l as usize * counts.get(&l).unwrap_or(&0))
+        .sum();
     Ok(sum)
 }
 
