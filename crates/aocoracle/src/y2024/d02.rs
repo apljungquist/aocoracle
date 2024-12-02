@@ -1,43 +1,67 @@
 use itertools::Itertools;
 
+fn problem(line:&[i64]) -> Option<(usize, usize)> {
+    let mut sign = None;
+    for j in 1..line.len() {
+        let i = j - 1;
+        let l = line[i];
+        let r = line[j];
+
+        if l.abs_diff(r) > 3 {
+            return Some((i,j))
+        }
+        if l < r {
+            if sign.unwrap_or(1) != 1 {
+                return Some((i,j))
+            } else {
+                sign = Some(1)
+            }
+        } else if l > r {
+            if sign.unwrap_or(-1) != -1 {
+                return Some((i,j))
+            } else {
+                sign = Some(-1)
+            }
+        } else {
+            return Some((i,j))
+        }
+    }
+    None
+}
 pub fn part_1(input: &str) -> anyhow::Result<i64> {
     let mut num_safe = 0;
     for line in input.lines() {
-        let mut is_safe = true;
-        let mut sign = None;
-        for (l, r) in line
+        let line: Vec<_> =  line
             .split_whitespace()
             .map(|x| x.parse::<i64>().unwrap())
-            .tuple_windows()
-        {
-            if l.abs_diff(r) > 3 {
-                is_safe = false;
-            }
-            if l < r {
-                if sign.unwrap_or(1) != 1 {
-                    is_safe = false;
-                } else {
-                    sign = Some(1)
-                }
-            } else if l > r {
-                if sign.unwrap_or(-1) != -1 {
-                    is_safe = false;
-                } else {
-                    sign = Some(-1)
-                }
-            } else {
-                is_safe = false;
-            }
-        }
-        if is_safe {
-            num_safe += 1;
-        }
+            .collect();
+        if problem(&line).is_none() {num_safe +=1}
     }
     Ok(num_safe)
 }
 
+
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
-    Ok(0)
+    let mut num_safe = 0;
+    for line in input.lines() {
+        let mut line: Vec<_> =  line
+            .split_whitespace()
+            .map(|x| x.parse::<i64>().unwrap())
+            .collect();
+        if let Some(_) = problem(&line) {
+            for i in 0..line.len() {
+                let mut tmp = line.clone();
+                tmp.remove(i);
+                if problem(&tmp).is_none() {
+                    num_safe += 1;
+                    break
+                }
+            }
+        } else {
+            num_safe += 1;
+        }
+    }
+    Ok(num_safe)
 }
 
 #[cfg(test)]
@@ -64,6 +88,7 @@ mod tests {
     #[test]
     fn part_2_works_on_input() {
         assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        // 242 is too low
     }
 
     #[test]
