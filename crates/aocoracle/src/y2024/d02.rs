@@ -1,5 +1,39 @@
+use itertools::Itertools;
+
 pub fn part_1(input: &str) -> anyhow::Result<i64> {
-    Ok(0)
+    let mut num_safe = 0;
+    for line in input.lines() {
+        let mut is_safe = true;
+        let mut sign = None;
+        for (l, r) in line
+            .split_whitespace()
+            .map(|x| x.parse::<i64>().unwrap())
+            .tuple_windows()
+        {
+            if l.abs_diff(r) > 3 {
+                is_safe = false;
+            }
+            if l < r {
+                if sign.unwrap_or(1) != 1 {
+                    is_safe = false;
+                } else {
+                    sign = Some(1)
+                }
+            } else if l > r {
+                if sign.unwrap_or(-1) != -1 {
+                    is_safe = false;
+                } else {
+                    sign = Some(-1)
+                }
+            } else {
+                is_safe = false;
+            }
+        }
+        if is_safe {
+            num_safe += 1;
+        }
+    }
+    Ok(num_safe)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
