@@ -1,34 +1,56 @@
-pub fn part_1(input: &str) -> anyhow::Result<u64> {
-    // let mut input = input.to_string();
-    let re = regex::Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
+use anyhow::{bail, Context};
+
+#[derive(Debug)]
+enum Op {
+    Do,
+    DoNot,
+    Mul(i64, i64),
+}
+fn parse(input: &str) -> anyhow::Result<Vec<Op>> {
+    let re = regex::Regex::new(r"(mul|do|don't)\(((\d{1,3}),(\d{1,3}))?\)")
+        .expect("hard coded regex is valid");
+    let mut instructions: Vec<Op> = Vec::new();
+    for cap in re.captures_iter(input) {
+        match &cap[1] {
+            "do" => instructions.push(Op::Do),
+            "don't" => instructions.push(Op::DoNot),
+            "mul" => instructions.push(Op::Mul(
+                cap.get(3).context("no left operand")?.as_str().parse()?,
+                cap.get(4).context("no right operand")?.as_str().parse()?,
+            )),
+            _ => unreachable!(),
+        }
+    }
+    if instructions.is_empty() {
+        bail!("no instructions found");
+    }
+    Ok(instructions)
+}
+
+pub fn part_1(input: &str) -> anyhow::Result<i64> {
+    let input = parse(input)?;
     let mut sum = 0;
-    for cap in re.captures_iter(input.trim()) {
-        let lhs:u64 = cap[1].parse()?;
-        let rhs:u64 = cap[2].parse()?;
-        sum += lhs * rhs;
+    for op in input {
+        if let Op::Mul(first, second) = op {
+            sum += first * second;
+        }
     }
     Ok(sum)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<u64> {
-
-    // let mut input = input.to_string();
+pub fn part_2(input: &str) -> anyhow::Result<i64> {
+    let input = parse(input)?;
     let mut active = true;
-    let re = regex::Regex::new(r"(mul|do|don't)\(((\d{1,3}),(\d{1,3}))?\)").unwrap();
     let mut sum = 0;
-    for cap in re.captures_iter(input.trim()) {
-
-        match &cap[1] {
-            "do"=> active = true,
-            "don't"=> active = false,
-            "mul"=>{
+    for instruction in input {
+        match instruction {
+            Op::Do => active = true,
+            Op::DoNot => active = false,
+            Op::Mul(first, second) => {
                 if active {
-                    let lhs:u64 = cap[3].parse()?;
-                    let rhs:u64 = cap[4].parse()?;
-                    sum += lhs * rhs;
+                    sum += first * second
                 }
             }
-            _=> panic!("{cap:?}")
         }
     }
     Ok(sum)
@@ -47,18 +69,17 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "INPUT", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "725feb3ad71b0ac1", Part::One);
     }
 
     #[test]
     fn part_2_works_on_example() {
-        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "EXAMPLE2", Part::Two);
     }
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
-        // 242 is too low
+        assert_correct_answer_on_correct_input!(part_2, "725feb3ad71b0ac1", Part::Two);
     }
 
     #[test]
