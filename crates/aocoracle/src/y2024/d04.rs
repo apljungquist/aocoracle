@@ -1,104 +1,85 @@
 use anyhow::Context;
 use hashbrown::HashMap;
 
-fn parse(input: &str) -> anyhow::Result<Vec<()>> {
-    todo!()
-}
-
-// A0 B0 C0 D0 E0 F0
-// A1 B1 C1 D1 E1 F1
-// A2 B2 C2 D2 E2 F2
-// A3 B3 C3 D3 E3 F3
-// A4 B4 C4 D4 E4 F4
-
-pub fn part_1(input: &str) -> anyhow::Result<usize> {
+fn parse(input: &str) -> HashMap<(usize, usize), String> {
     let mut grid = HashMap::new();
     for (i, line) in input.lines().enumerate() {
         for (j, ch) in line.chars().enumerate() {
             grid.insert((i, j), ch.to_string());
-            // grid.insert((i, j), format!("{}{i} ", char::from(b'A' + j as u8)));
         }
     }
+    grid
+}
+
+pub fn part_1(input: &str) -> anyhow::Result<usize> {
+    let grid = parse(input);
     let h = *grid.keys().map(|(i, _)| i).max().unwrap();
     let w = *grid.keys().map(|(_, j)| j).max().unwrap();
-    dbg!(h, w);
 
-    let re = regex::Regex::new(r"XMAS").unwrap();
-    let mut counts = Vec::new();
+    let mut lines = Vec::new();
 
-    dbg!("horizontal");
+    // Horizontal
     for i in 0..=h {
-        let mut row = String::new();
+        let mut line = String::new();
         for j in 0..=w {
-            row.push_str(grid.get(&(i, j)).unwrap());
+            line.push_str(grid.get(&(i, j)).unwrap());
         }
-        counts.push(dbg!(re.captures_iter(dbg!(&row)).count()));
-        let rev = row.chars().rev().collect::<String>();
-        counts.push(dbg!(re.captures_iter(dbg!(&rev)).count()));
+        lines.push(line);
     }
-
-    dbg!("tl br");
+    // Diagonal tl -> br
     for i in 0..=h {
-        let mut row = String::new();
+        let mut line = String::new();
         let mut j = 0;
         while let Some(ch) = grid.get(&(i + j, j)) {
-            row.push_str(ch);
+            line.push_str(ch);
             j += 1;
         }
-        counts.push(dbg!(re.captures_iter(dbg!(&row)).count()));
-        let rev = row.chars().rev().collect::<String>();
-        counts.push(dbg!(re.captures_iter(dbg!(&rev)).count()));
+        lines.push(line);
     }
-    dbg!("tl br 2");
     for j in 1..=w {
-        let mut row = String::new();
+        let mut line = String::new();
         let mut i = 0;
         while let Some(ch) = grid.get(&(i, j + i)) {
-            row.push_str(ch);
+            line.push_str(ch);
             i += 1;
         }
-        counts.push(dbg!(re.captures_iter(dbg!(&row)).count()));
-        let rev = row.chars().rev().collect::<String>();
-        counts.push(dbg!(re.captures_iter(dbg!(&rev)).count()));
+        lines.push(line);
     }
-
-    dbg!("vertical");
+    // Vertical
     for j in 0..=w {
-        let mut row = String::new();
+        let mut line = String::new();
         for i in 0..=h {
-            row.push_str(grid.get(&(i, j)).unwrap());
+            line.push_str(grid.get(&(i, j)).unwrap());
         }
-        counts.push(dbg!(re.captures_iter(dbg!(&row)).count()));
-        let rev = row.chars().rev().collect::<String>();
-        counts.push(dbg!(re.captures_iter(dbg!(&rev)).count()));
+        lines.push(line);
     }
-
-    dbg!("tr bl");
+    // Diagonal bl -> tr
     for i in 0..=h {
-        let mut row = String::new();
+        let mut line = String::new();
         let mut j = 0;
         while let Some(ch) = grid.get(&(i.wrapping_sub(j), j)) {
-            row.push_str(ch);
+            line.push_str(ch);
             j += 1;
         }
-        counts.push(dbg!(re.captures_iter(dbg!(&row)).count()));
-        let rev = row.chars().rev().collect::<String>();
-        counts.push(dbg!(re.captures_iter(dbg!(&rev)).count()));
+        lines.push(line);
     }
-    dbg!("tr bl 2");
     for j in 1..=w {
-        let mut row = String::new();
+        let mut line = String::new();
         let mut i = 0;
         while let Some(ch) = grid.get(&(h.wrapping_sub(i), j + i)) {
-            row.push_str(ch);
+            line.push_str(ch);
             i += 1;
         }
-        counts.push(dbg!(re.captures_iter(dbg!(&row)).count()));
-        let rev = row.chars().rev().collect::<String>();
-        counts.push(dbg!(re.captures_iter(dbg!(&rev)).count()));
+        lines.push(line);
     }
 
-    Ok(counts.into_iter().sum())
+    let forward = regex::Regex::new(r"XMAS").unwrap();
+    let backward = regex::Regex::new(r"SAMX").unwrap();
+
+    Ok(lines
+        .into_iter()
+        .map(|line| forward.captures_iter(&line).count() + backward.captures_iter(&line).count())
+        .sum())
 }
 
 fn is_mas(l: &str, c: &str, r: &str) -> bool {
@@ -123,13 +104,7 @@ fn is_xmas(grid: &HashMap<(usize, usize), String>, i: usize, j: usize) -> bool {
     is_mas(tl, c, br) && is_mas(tr, c, bl)
 }
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let mut grid = HashMap::new();
-    for (i, line) in input.lines().enumerate() {
-        for (j, ch) in line.chars().enumerate() {
-            grid.insert((i, j), ch.to_string());
-            // grid.insert((i, j), format!("{}{i} ", char::from(b'A' + j as u8)));
-        }
-    }
+    let grid = parse(input);
     let h = *grid.keys().map(|(i, _)| i).max().unwrap();
     let w = *grid.keys().map(|(_, j)| j).max().unwrap();
 
@@ -163,7 +138,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "INPUT", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "84e50060685ee1f0", Part::One);
     }
 
     #[test]
@@ -173,7 +148,7 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "84e50060685ee1f0", Part::Two);
     }
 
     #[test]
