@@ -1,5 +1,6 @@
 use anyhow::Context;
 use hashbrown::HashMap;
+use itertools::Itertools;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -58,8 +59,59 @@ pub fn part_1(input: &str) -> anyhow::Result<i64> {
         .sum())
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    Ok(0)
+fn topological_order(mut orderings: HashMap<i64, HashSet<i64>>, group: &[i64]) -> Vec<i64> {
+    let mut sorted = Vec::new();
+    let mut nodes: HashSet<_> = orderings.keys().cloned().collect();
+    nodes.extend(orderings.values().flatten());
+
+    let incoming: Vec<_> = orderings.keys().cloned().sorted().collect();
+    let outgoing: Vec<_> = orderings
+        .values()
+        .flatten()
+        .unique()
+        .sorted()
+        .cloned()
+        .collect();
+    // Seems there are cycles in the input
+    dbg!(&incoming, &outgoing, incoming == outgoing);
+
+    let group: HashSet<_> = group.into_iter().cloned().collect();
+    let mut unconstrained: Vec<_> = nodes
+        .into_iter()
+        .filter(|n| {
+            orderings
+                .get(n)
+                .map(|vs| vs.intersection(&group).count() == 0)
+                .unwrap_or(true)
+        })
+        .sorted()
+        .collect();
+    assert!(!unconstrained.is_empty());
+    while let Some(node) = unconstrained.pop() {
+        sorted.push(node);
+        for (k, vs) in orderings.iter_mut() {
+            if vs.remove(&node) && vs.is_empty() {
+                unconstrained.push(*k);
+            }
+        }
+    }
+    sorted
+}
+
+pub fn part_2(input: &str) -> anyhow::Result<i64> {
+    let Input {
+        orderings,
+        mut groups,
+    } = parse(input)?;
+    groups.retain(|g| !is_ordered(&orderings, g));
+
+    let mut sum = 0;
+    for group in groups {
+        let sorted = dbg!(topological_order(orderings.clone(), &group));
+        let group: Vec<_> = dbg!(sorted.iter().filter(|n| group.contains(n)).collect());
+        sum += group[group.len() / 2]
+    }
+    Ok(sum)
 }
 
 #[cfg(test)]
@@ -87,6 +139,7 @@ mod tests {
     #[test]
     fn part_2_works_on_input() {
         assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        // 5128 is too high
     }
 
     #[test]
