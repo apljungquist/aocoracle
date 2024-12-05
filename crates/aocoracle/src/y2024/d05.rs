@@ -1,6 +1,7 @@
 use anyhow::Context;
 use hashbrown::HashMap;
 use itertools::Itertools;
+use std::cmp::Ordering;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -107,9 +108,26 @@ pub fn part_2(input: &str) -> anyhow::Result<i64> {
 
     let mut sum = 0;
     for group in groups {
-        let sorted = dbg!(topological_order(orderings.clone(), &group));
-        let group: Vec<_> = dbg!(sorted.iter().filter(|n| group.contains(n)).collect());
-        sum += group[group.len() / 2]
+        let sorted: Vec<_> = group
+            .iter()
+            .cloned()
+            .sorted_by(|l, r| {
+                if let Some(after) = orderings.get(&l) {
+                    if after.contains(r) {
+                        return Ordering::Less;
+                    }
+                }
+                if let Some(after) = orderings.get(&r) {
+                    if after.contains(&l) {
+                        return Ordering::Greater;
+                    }
+                }
+                Ordering::Equal
+            })
+            .collect();
+        if sorted != group {
+            sum += sorted[group.len() / 2]
+        }
     }
     Ok(sum)
 }
