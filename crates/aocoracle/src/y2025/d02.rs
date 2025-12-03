@@ -39,7 +39,7 @@ fn is_invalid2(s: &str) -> bool {
             let right = ((j + 1) * i);
             if (&s[left..mid]) != (&s[mid..right]) {
                 is_valid = true;
-                break
+                break;
             }
         }
         if !is_valid {
