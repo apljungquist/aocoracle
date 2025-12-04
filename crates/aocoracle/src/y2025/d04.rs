@@ -65,57 +65,9 @@ pub fn part_2(input: &str) -> anyhow::Result<u64> {
     }
 
     let initial = sparse.len() as u64;
-    'outer: loop {
-        for y in 0..w {
-            for x in 0..h {
-                if sparse.contains_key(&(x, y)) {
-                    let mut neighbor_count = 0;
-                    for dy in -1..=1 {
-                        for dx in -1..=1 {
-                            if dx == 0 && dy == 0 {
-                                continue;
-                            }
-                            if sparse.contains_key(&(x + dx, y + dy)) {
-                                neighbor_count += 1;
-                            }
-                        }
-                    }
-                    if neighbor_count < 4 {
-                        // print!("x");
-                        sparse.remove(&(x, y));
-                        continue 'outer;
-                    } else {
-                        // print!("@");
-                    }
-                } else {
-                    // print!(".");
-                }
-            }
-            // println!("");
-        }
-        break;
-    }
-    Ok(initial - sparse.len() as u64)
-}
-pub fn part_2b(input: &str) -> anyhow::Result<u64> {
-    let mut sparse = HashMap::new();
-    let mut w = 0;
-    let mut h = 0;
-    for (y, line) in input.lines().enumerate() {
-        let y = y as i32;
-        h = h.max(y + 1);
-        for (x, char) in line.chars().enumerate() {
-            let x = x as i32;
-            w = w.max(x + 1);
-            if char == '@' {
-                sparse.insert((x, y), ());
-            }
-        }
-    }
-
-    let initial = sparse.len() as u64;
-    'outer: loop {
-        for (x, y) in sparse.keys().cloned() {
+    loop {
+        let mut should_break = true;
+        for (x, y) in sparse.keys().into_iter().cloned().collect::<Vec<_>>() {
             let mut neighbor_count = 0;
             for dy in -1..=1 {
                 for dx in -1..=1 {
@@ -128,12 +80,12 @@ pub fn part_2b(input: &str) -> anyhow::Result<u64> {
                 }
             }
             if neighbor_count < 4 {
-                // print!("x");
                 sparse.remove(&(x, y));
-                continue 'outer;
-            } else {
-                // print!("@");
+                should_break = false;
             }
+        }
+        if should_break {
+            break;
         }
     }
     Ok(initial - sparse.len() as u64)
@@ -152,7 +104,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "INPUT", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "52a52b44979fe307", Part::One);
     }
 
     #[test]
@@ -162,7 +114,7 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "52a52b44979fe307", Part::Two);
     }
 
     #[test]
