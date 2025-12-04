@@ -1,14 +1,142 @@
 use num::pow;
+use std::collections::HashMap;
 use std::mem::swap;
 
 pub fn part_1(input: &str) -> anyhow::Result<u32> {
+    let mut sparse = HashMap::new();
+    let mut w = 0;
+    let mut h = 0;
+    for (y, line) in input.lines().enumerate() {
+        let y = y as i32;
+        h = h.max(y + 1);
+        for (x, char) in line.chars().enumerate() {
+            let x = x as i32;
+            w = w.max(x + 1);
+            if char == '@' {
+                sparse.insert((x, y), ());
+            }
+        }
+    }
+
     let mut sum = 0;
+    for y in 0..w {
+        for x in 0..h {
+            if sparse.contains_key(&(x, y)) {
+                let mut neighbor_count = 0;
+                for dy in -1..=1 {
+                    for dx in -1..=1 {
+                        if dx == 0 && dy == 0 {
+                            continue;
+                        }
+                        if sparse.contains_key(&(x + dx, y + dy)) {
+                            neighbor_count += 1;
+                        }
+                    }
+                }
+                if neighbor_count < 4 {
+                    // print!("x");
+                    sum += 1;
+                } else {
+                    // print!("@");
+                }
+            } else {
+                // print!(".");
+            }
+        }
+        // println!("");
+    }
     Ok(sum)
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<u64> {
-    let mut sum = 0;
-    Ok(sum)
+    let mut sparse = HashMap::new();
+    let mut w = 0;
+    let mut h = 0;
+    for (y, line) in input.lines().enumerate() {
+        let y = y as i32;
+        h = h.max(y + 1);
+        for (x, char) in line.chars().enumerate() {
+            let x = x as i32;
+            w = w.max(x + 1);
+            if char == '@' {
+                sparse.insert((x, y), ());
+            }
+        }
+    }
+
+    let initial = sparse.len() as u64;
+    'outer: loop {
+        for y in 0..w {
+            for x in 0..h {
+                if sparse.contains_key(&(x, y)) {
+                    let mut neighbor_count = 0;
+                    for dy in -1..=1 {
+                        for dx in -1..=1 {
+                            if dx == 0 && dy == 0 {
+                                continue;
+                            }
+                            if sparse.contains_key(&(x + dx, y + dy)) {
+                                neighbor_count += 1;
+                            }
+                        }
+                    }
+                    if neighbor_count < 4 {
+                        // print!("x");
+                        sparse.remove(&(x, y));
+                        continue 'outer;
+                    } else {
+                        // print!("@");
+                    }
+                } else {
+                    // print!(".");
+                }
+            }
+            // println!("");
+        }
+        break;
+    }
+    Ok(initial - sparse.len() as u64)
+}
+pub fn part_2b(input: &str) -> anyhow::Result<u64> {
+    let mut sparse = HashMap::new();
+    let mut w = 0;
+    let mut h = 0;
+    for (y, line) in input.lines().enumerate() {
+        let y = y as i32;
+        h = h.max(y + 1);
+        for (x, char) in line.chars().enumerate() {
+            let x = x as i32;
+            w = w.max(x + 1);
+            if char == '@' {
+                sparse.insert((x, y), ());
+            }
+        }
+    }
+
+    let initial = sparse.len() as u64;
+    'outer: loop {
+        for (x, y) in sparse.keys().cloned() {
+            let mut neighbor_count = 0;
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
+                    if sparse.contains_key(&(x + dx, y + dy)) {
+                        neighbor_count += 1;
+                    }
+                }
+            }
+            if neighbor_count < 4 {
+                // print!("x");
+                sparse.remove(&(x, y));
+                continue 'outer;
+            } else {
+                // print!("@");
+            }
+        }
+    }
+    Ok(initial - sparse.len() as u64)
 }
 
 #[cfg(test)]
