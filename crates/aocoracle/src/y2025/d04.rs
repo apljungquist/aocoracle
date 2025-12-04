@@ -1,6 +1,4 @@
-use num::pow;
 use std::collections::HashMap;
-use std::mem::swap;
 
 pub fn part_1(input: &str) -> anyhow::Result<u32> {
     let mut sparse = HashMap::new();
@@ -67,7 +65,7 @@ pub fn part_2(input: &str) -> anyhow::Result<u64> {
     let initial = sparse.len() as u64;
     loop {
         let mut should_break = true;
-        for (x, y) in sparse.keys().into_iter().cloned().collect::<Vec<_>>() {
+        for (x, y) in sparse.keys().cloned().collect::<Vec<_>>() {
             let mut neighbor_count = 0;
             for dy in -1..=1 {
                 for dx in -1..=1 {

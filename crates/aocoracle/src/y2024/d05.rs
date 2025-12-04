@@ -12,20 +12,20 @@ struct Input {
 fn parse(input: &str) -> anyhow::Result<Input> {
     let mut orderings = HashMap::new();
     let mut lines = input.lines();
-    while let Some(line) = lines.next() {
+    for line in lines.by_ref() {
         if line.is_empty() {
             break;
         }
-        let (l, r) = line.split_once("|").context("Cannot split")?;
+        let (l, r) = line.split_once('|').context("Cannot split")?;
         let l = l.parse::<i64>()?;
         let r = r.parse::<i64>()?;
         orderings.entry(l).or_insert(HashSet::new()).insert(r);
     }
 
     let mut pages = Vec::new();
-    while let Some(line) = lines.next() {
+    for line in lines {
         let mut row = Vec::new();
-        for page in line.split(",") {
+        for page in line.split(',') {
             row.push(page.parse::<i64>()?);
         }
         pages.push(row);
@@ -41,7 +41,7 @@ fn is_ordered(orderings: &HashMap<i64, HashSet<i64>>, pages: &[i64]) -> bool {
     for i in 0..pages.len() {
         let curr = pages[i];
         for later in pages[i..pages.len()].iter() {
-            if let Some(constraints) = orderings.get(&later) {
+            if let Some(constraints) = orderings.get(later) {
                 if constraints.contains(&curr) {
                     return false;
                 }
@@ -60,45 +60,6 @@ pub fn part_1(input: &str) -> anyhow::Result<i64> {
         .sum())
 }
 
-fn topological_order(mut orderings: HashMap<i64, HashSet<i64>>, group: &[i64]) -> Vec<i64> {
-    let mut sorted = Vec::new();
-    let mut nodes: HashSet<_> = orderings.keys().cloned().collect();
-    nodes.extend(orderings.values().flatten());
-
-    let incoming: Vec<_> = orderings.keys().cloned().sorted().collect();
-    let outgoing: Vec<_> = orderings
-        .values()
-        .flatten()
-        .unique()
-        .sorted()
-        .cloned()
-        .collect();
-    // Seems there are cycles in the input
-    dbg!(&incoming, &outgoing, incoming == outgoing);
-
-    let group: HashSet<_> = group.into_iter().cloned().collect();
-    let mut unconstrained: Vec<_> = nodes
-        .into_iter()
-        .filter(|n| {
-            orderings
-                .get(n)
-                .map(|vs| vs.intersection(&group).count() == 0)
-                .unwrap_or(true)
-        })
-        .sorted()
-        .collect();
-    assert!(!unconstrained.is_empty());
-    while let Some(node) = unconstrained.pop() {
-        sorted.push(node);
-        for (k, vs) in orderings.iter_mut() {
-            if vs.remove(&node) && vs.is_empty() {
-                unconstrained.push(*k);
-            }
-        }
-    }
-    sorted
-}
-
 pub fn part_2(input: &str) -> anyhow::Result<i64> {
     let Input {
         orderings,
@@ -112,13 +73,13 @@ pub fn part_2(input: &str) -> anyhow::Result<i64> {
             .iter()
             .cloned()
             .sorted_by(|l, r| {
-                if let Some(after) = orderings.get(&l) {
+                if let Some(after) = orderings.get(l) {
                     if after.contains(r) {
                         return Ordering::Less;
                     }
                 }
-                if let Some(after) = orderings.get(&r) {
-                    if after.contains(&l) {
+                if let Some(after) = orderings.get(r) {
+                    if after.contains(l) {
                         return Ordering::Greater;
                     }
                 }

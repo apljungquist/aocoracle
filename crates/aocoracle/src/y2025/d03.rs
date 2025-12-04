@@ -15,7 +15,7 @@ pub fn part_1(input: &str) -> anyhow::Result<u32> {
                 a = v;
             }
         }
-        sum += (10 * a + b);
+        sum += 10 * a + b;
     }
     Ok(sum)
 }

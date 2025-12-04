@@ -25,9 +25,7 @@ pub fn part_1(input: &str) -> anyhow::Result<u64> {
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
     let mut count = 0;
     let mut pos = 50;
-    let mut prev_pos = 0;
     for line in input.lines() {
-        prev_pos = pos;
         let dir = line.chars().next().unwrap();
         let mag = i64::from_str_radix(&line[1..], 10)?;
         for _ in 0..mag {

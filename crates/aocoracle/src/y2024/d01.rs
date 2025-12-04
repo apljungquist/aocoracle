@@ -33,7 +33,7 @@ pub fn part_1(input: &str) -> anyhow::Result<u64> {
     right.sort_unstable();
     let sum = left
         .into_iter()
-        .zip(right.into_iter())
+        .zip(right)
         .map(|(l, r)| l.abs_diff(r))
         .sum();
     Ok(sum)

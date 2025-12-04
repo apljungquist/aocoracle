@@ -1,10 +1,10 @@
-pub fn part_1(input: &str) -> anyhow::Result<u32> {
-    let mut sum = 0;
+pub fn part_1(_input: &str) -> anyhow::Result<u32> {
+    let sum = 0;
     Ok(sum)
 }
 
-pub fn part_2(input: &str) -> anyhow::Result<u32> {
-    let mut sum = 0;
+pub fn part_2(_input: &str) -> anyhow::Result<u32> {
+    let sum = 0;
     Ok(sum)
 }
 

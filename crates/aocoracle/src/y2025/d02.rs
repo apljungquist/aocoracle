@@ -1,8 +1,3 @@
-struct Range {
-    a: u64,
-    b: u64,
-}
-
 fn is_invalid(s: &str) -> bool {
     let m = s.len() / 2;
     s[..m] == s[m..]
@@ -26,17 +21,15 @@ pub fn part_1(input: &str) -> anyhow::Result<u64> {
 }
 
 fn is_invalid2(s: &str) -> bool {
-    (s);
     for i in 1..=(s.len() / 2) {
         if s.len() % i != 0 {
             continue;
         }
-        (i);
         let mut is_valid = false;
         for j in 1..(s.len() / i) {
-            let left = ((j - 1) * i);
-            let mid = (j * i);
-            let right = ((j + 1) * i);
+            let left = (j - 1) * i;
+            let mid = j * i;
+            let right = (j + 1) * i;
             if (&s[left..mid]) != (&s[mid..right]) {
                 is_valid = true;
                 break;

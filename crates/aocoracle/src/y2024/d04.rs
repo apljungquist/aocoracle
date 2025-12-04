@@ -1,4 +1,3 @@
-use anyhow::Context;
 use hashbrown::HashMap;
 
 fn parse(input: &str) -> HashMap<(usize, usize), String> {
