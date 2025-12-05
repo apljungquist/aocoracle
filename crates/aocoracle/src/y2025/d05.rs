@@ -2,11 +2,11 @@ pub fn part_1(input: &str) -> anyhow::Result<u32> {
     let mut lines = input.lines();
 
     let mut fresh = Vec::new();
-    while let Some(line) = lines.next() {
+    for line in lines.by_ref() {
         if line.is_empty() {
             break;
         }
-        let (a, b) = line.split_once("-").unwrap();
+        let (a, b) = line.split_once('-').unwrap();
         let a = a.parse::<i64>()?;
         let b = b.parse::<i64>()?;
         fresh.push(a..=b);
@@ -30,14 +30,14 @@ pub fn part_1(input: &str) -> anyhow::Result<u32> {
     Ok(sum)
 }
 pub fn part_2(input: &str) -> anyhow::Result<i128> {
-    let mut lines = input.lines();
+    let lines = input.lines();
 
     let mut fresh = Vec::new();
-    while let Some(line) = lines.next() {
+    for line in lines {
         if line.is_empty() {
             break;
         }
-        let (a, b) = line.split_once("-").unwrap();
+        let (a, b) = line.split_once('-').unwrap();
         let a = a.parse::<i128>()?;
         let b = b.parse::<i128>()?;
         fresh.push((a, b));
@@ -50,40 +50,28 @@ pub fn part_2(input: &str) -> anyhow::Result<i128> {
                 continue 'outer; // The range is contained in a previous range
             }
             if first < lo && (lo <= last && last <= hi) {
-                // println!("a");
                 fresh.push((first, lo - 1));
                 continue 'outer;
             }
             if (lo <= first && first <= hi) && hi < last {
-                // println!("b");
                 fresh.push((hi + 1, last));
                 continue 'outer;
             }
             if first < lo && hi < last {
-                println!("c");
-                fresh.push(((first, lo - 1)));
-                fresh.push(((hi + 1, last)));
+                fresh.push((first, lo - 1));
+                fresh.push((hi + 1, last));
                 continue 'outer;
             }
-            // println!("d");
         }
         seen.push((first, last));
     }
-
-    // 474235903668691                                                                 481728314013923
-    //                                 476951396635787 477940327871613
-    // 474235903668691 476951396635786                                 477940327871614 481728314013923
-
-    // dbg!(&seen);
-
+    
     let mut sum = 0;
     for (first, last) in seen {
         let n = last - first + 1;
         sum += n;
     }
 
-    assert_ne!(sum, 367378579850346);
-    assert_ne!(sum, 358626364849641);
     Ok(sum)
 }
 
@@ -100,7 +88,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "INPUT", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "22a23cd32ec152f2", Part::One);
     }
 
     #[test]
@@ -110,7 +98,7 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "22a23cd32ec152f2", Part::Two);
     }
 
     #[test]
