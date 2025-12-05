@@ -1,9 +1,10 @@
 black
+env_logger
 isort
 fire
-mkhelp
 mypy
 pip
+pip-tools
 requests
 ruff
 setuptools

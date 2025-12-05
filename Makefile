@@ -91,8 +91,12 @@ fix_lint_rs:
 ## Other verbs
 ## -----------
 
+## Install lfs and ensure submodules
+init_env: data
+	git lfs install
+
 ## Install the recommended dependencies for development
-sync_env: venv/bin/trunk
+sync_env:
 	PIP_CONSTRAINT=constraints.txt pip install -r requirements.txt
 
 ## Serve webapp with automatic reloading
@@ -121,6 +125,9 @@ serve-rel: dist/release/index.html
 
 constraints.txt: requirements.txt
 	pip-compile --allow-unsafe --no-header --output-file $@ --quiet $^
+
+data:
+	git submodule update --init --recursive
 
 # Build webapp for serving locally
 dist/release/index.html: crates/webapp/index.html

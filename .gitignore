@@ -1,6 +1,7 @@
 /bin/scrape.sessions.json
 /cache/
 /data/questions/
+/.direnv/
 /dist/
 /docs/
 /.idea/
