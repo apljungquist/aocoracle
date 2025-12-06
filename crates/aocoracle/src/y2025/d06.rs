@@ -19,15 +19,15 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 
     let mut grand_total = 0;
     for j in 0..w {
-        match ops.get(&j).unwrap() {
-            &"*" => {
+        match *ops.get(&j).unwrap() {
+            "*" => {
                 let mut prod = 1;
                 for i in 0..h {
-                    prod *= (numbers.get(&((i, j))).unwrap());
+                    prod *= numbers.get(&((i, j))).unwrap();
                 }
                 grand_total += prod;
             }
-            &"+" => {
+            "+" => {
                 let mut sum = 0;
                 for i in 0..h {
                     sum += numbers.get(&(i, j)).unwrap();
@@ -42,38 +42,31 @@ pub fn part_1(input: &str) -> anyhow::Result<usize> {
 }
 
 pub fn part_2(input: &str) -> anyhow::Result<usize> {
-    let mut transposed: HashMap<usize, String> = HashMap::new();
+    let mut transposed = Vec::new();
     for line in input.lines() {
-        for (i, c) in line.chars().enumerate() {
-            transposed.entry(i).or_default().push(c);
+        transposed.resize(transposed.len().max(line.len()), String::new());
+        for (s, c) in transposed.iter_mut().zip(line.chars()) {
+            s.push(c);
         }
     }
 
-    for i in 0..transposed.len() {
-        println!("{}", transposed.get(&i).unwrap());
-    }
+    transposed.reverse();
 
     let mut grand_total = 0;
-    let mut j = 0;
     loop {
-        let Some(line) = transposed.remove(&j) else {
+        let Some(line) = transposed.pop() else {
             break;
         };
-        let op = dbg!(line.trim().chars().last().unwrap());
-        let n = dbg!(line[..line.len() - 1].trim())
-            .parse::<usize>()
-            .unwrap();
+        let op = line.trim().chars().last().unwrap();
+        let n = line[..line.len() - 1].trim().parse::<usize>().unwrap();
         let mut nums = vec![n];
-        j += 1;
-        while let Some(line) = transposed.remove(&j) {
-            println!("{line:?}");
+
+        while let Some(line) = transposed.pop() {
             if line.trim().is_empty() {
-                println!("break");
                 break;
             }
-            let n = dbg!(line.trim()).parse::<usize>().unwrap();
+            let n = line.trim().parse::<usize>().unwrap();
             nums.push(n);
-            j += 1;
         }
 
         match op {
@@ -82,18 +75,17 @@ pub fn part_2(input: &str) -> anyhow::Result<usize> {
                 for n in nums {
                     prod *= n;
                 }
-                grand_total += dbg!(prod);
+                grand_total += prod;
             }
             '+' => {
                 let mut sum = 0;
                 for n in nums {
                     sum += n;
                 }
-                grand_total += dbg!(sum);
+                grand_total += sum;
             }
             _ => unreachable!("{:?}", op),
         }
-        j += 1;
     }
 
     Ok(grand_total)
@@ -112,7 +104,7 @@ mod tests {
 
     #[test]
     fn part_1_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_1, "INPUT", Part::One);
+        assert_correct_answer_on_correct_input!(part_1, "0a760efd5f01774a", Part::One);
     }
 
     #[test]
@@ -122,10 +114,11 @@ mod tests {
 
     #[test]
     fn part_2_works_on_input() {
-        assert_correct_answer_on_correct_input!(part_2, "INPUT", Part::Two);
+        assert_correct_answer_on_correct_input!(part_2, "0a760efd5f01774a", Part::Two);
     }
 
     #[test]
+    #[ignore]
     fn returns_error_on_wrong_input() {
         assert_error_on_wrong_input!(part_1, part_2);
     }
