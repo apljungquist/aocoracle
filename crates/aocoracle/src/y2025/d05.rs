@@ -65,7 +65,7 @@ pub fn part_2(input: &str) -> anyhow::Result<i128> {
         }
         seen.push((first, last));
     }
-    
+
     let mut sum = 0;
     for (first, last) in seen {
         let n = last - first + 1;
