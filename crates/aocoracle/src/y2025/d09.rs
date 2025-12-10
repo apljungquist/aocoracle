@@ -39,31 +39,29 @@ pub fn part_2(input: &str) -> anyhow::Result<u64> {
             let jmax = j1.max(j2); // 5
             let candidate = (i1.abs_diff(i2) + 1) * (j1.abs_diff(j2) + 1);
             for &(i3, j3) in &tiles {
-                // // Corner check
-                // // 2,1 --- 11,1
-                // //  |        |
-                // // 2,5 --- 11,5
-                // if (i3 == i1 && j3 == j2) || (i3 == i2 && j3 == j1) || (i3 == i1 && j3 == j2) || (i3 == i2 && j3 == j2) {
-                //     continue;
-                // }
+                // Border check
+                // 2,1 --- 11,1
+                //  |        |
+                // 2,5 --- 11,5
+                if (i3 == imin && jmin <= j3 && j3 <= jmax)
+                    || (i3 == imax && jmin <= j3 && j3 <= jmax)
+                    || (imin <= i3 && i3 <= imax && j3 == jmin)
+                    || (imin <= i3 && i3 <= imax && j3 == jmax)
+                {
+                    continue;
+                }
 
                 // 7,3
                 // 2 < 7 < 11: true
                 // 1 < 3 < 5: true
-                if imin < i3 && i3 < imax && jmin <= j3 && j3 <= jmax {
-                    // if candidate == 24 {
-                    //     println!("breaking {i1},{j1}->{i2},{j2} at {i3},{j3}");
-                    // }
-                    continue 'outer;
-                }
-                if imin <= i3 && i3 <= imax && jmin < j3 && j3 < jmax {
+                if imin < i3 && i3 < imax && jmin < j3 && j3 < jmax {
                     // if candidate == 24 {
                     //     println!("breaking {i1},{j1}->{i2},{j2} at {i3},{j3}");
                     // }
                     continue 'outer;
                 }
             }
-            // println!("{i1},{j1}->{i2},{j2}: {candidate}");
+            println!("{i1},{j1}->{i2},{j2}: {candidate}");
             max = max.max(candidate);
         }
     }
